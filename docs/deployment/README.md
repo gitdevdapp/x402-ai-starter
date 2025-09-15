@@ -1,129 +1,208 @@
-# Deployment Guide
+# Deployment Best Practices
 
-Complete deployment guide for the x402 blockchain payment application.
+This document outlines best practices for preventing deployment issues, particularly those related to dependency management and build failures.
 
-## Quick Start
+## AI SDK Dependency Management
 
-### Prerequisites
-- Node.js 22.x+
-- pnpm package manager
-- CDP (Coinbase Developer Platform) account
+### Understanding AI SDK v5 Architecture
 
-### 1. Get CDP Credentials
+AI SDK v5 introduced a modular architecture where provider-specific functions are separated into individual packages:
 
-1. Visit [CDP Portal](https://portal.cdp.coinbase.com)
-2. Create API key and download credentials
-3. Generate wallet secret
+- **Core package**: `ai` - Contains core functionality like `streamText`, `generateText`, `tool`, etc.
+- **Provider packages**: `@ai-sdk/openai`, `@ai-sdk/google`, `@ai-sdk/anthropic`, etc.
 
-### 2. Environment Setup
+### Correct Import Patterns
 
-Create `.env.local`:
-```bash
-# CDP Credentials
-CDP_API_KEY_ID=your-api-key-id
-CDP_API_KEY_SECRET=your-api-key-secret
-CDP_WALLET_SECRET=your-wallet-secret
+#### ✅ Correct Usage
+```typescript
+// Core AI SDK imports
+import { streamText, generateText, tool } from "ai";
 
-# Network (base-sepolia for testnet, base for mainnet)
-NETWORK=base-sepolia
-
-# Optional: AI Gateway
-VERCEL_AI_GATEWAY_KEY=your-vercel-key
+// Provider-specific imports
+import { openai } from "@ai-sdk/openai";
+import { google } from "@ai-sdk/google";
+import { anthropic } from "@ai-sdk/anthropic";
 ```
 
-### 3. Install and Run
-
-```bash
-pnpm install
-pnpm dev
+#### ❌ Incorrect Usage (Will Cause Build Failures)
+```typescript
+// This will fail in AI SDK v5+
+import { streamText, openai, google } from "ai";
 ```
 
-Visit [http://localhost:3000](http://localhost:3000)
+## Pre-Deployment Validation
 
-## Deployment Options
+### 1. Local Build Testing
 
-### Vercel (Recommended)
-
-1. **Deploy to Vercel**:
-   ```bash
-   vercel --prod
-   ```
-
-2. **Set Environment Variables** in Vercel dashboard:
-   - `CDP_API_KEY_ID`
-   - `CDP_API_KEY_SECRET` 
-   - `CDP_WALLET_SECRET`
-   - `NETWORK` (base-sepolia or base)
-
-### Local Production
+Always test your build locally before deploying:
 
 ```bash
-# Build for production
-pnpm build
+# Test the production build
+pnpm run build
 
-# Start production server
+# Verify the build starts correctly
 pnpm start
 ```
 
-## Network Configuration
+### 2. Dependency Audit
 
-### Testnet (Development)
+Before adding or updating dependencies:
+
 ```bash
-NETWORK=base-sepolia
-```
-- Free testnet funds via faucet
-- No real money involved
-- Automatic funding when balance low
+# Check what's exported from a package
+node -e "console.log(Object.keys(require('package-name')))"
 
-### Mainnet (Production)
-```bash
-NETWORK=base
-```
-- Real USDC and ETH required
-- Manual funding only
-- Production monitoring needed
-
-## Security
-
-### Environment Protection
-- Never commit `.env.local` to git
-- Store credentials securely in deployment platform
-- Use different credentials for different environments
-
-### File Security
-```bash
-# Ensure these are in .gitignore:
-.env.local
-.env*
-cdp_api_key.json
-cdp_wallet_secret.txt
+# Verify package documentation
+pnpm info package-name
 ```
 
-## Troubleshooting
+### 3. TypeScript Validation
 
-### Common Issues
+Enable strict type checking to catch import errors early:
 
-1. **Missing credentials**: Verify all environment variables are set
-2. **Network errors**: Check CDP credentials and network configuration
-3. **Insufficient funds**: Request from faucet (testnet) or fund manually (mainnet)
-
-### Debug Mode
-```bash
-# Enable debug logging
-DEBUG=cdp:* pnpm dev
+```json
+// tsconfig.json
+{
+  "compilerOptions": {
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "exactOptionalPropertyTypes": true
+  }
+}
 ```
 
-## Support
+## Continuous Integration Best Practices
 
-- [CDP Documentation](https://docs.cdp.coinbase.com)
-- [Base Documentation](https://docs.base.org)
-- [Vercel Documentation](https://vercel.com/docs)
+### GitHub Actions Workflow
 
-## Architecture
+Create `.github/workflows/ci.yml`:
 
-The application uses:
-- **Frontend**: Next.js with React
-- **Backend**: API routes with CDP SDK
-- **Wallet**: Server-side CDP wallets
-- **Network**: Base (Ethereum L2)
-- **Tokens**: ETH for gas, USDC for payments
+```yaml
+name: CI
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+      
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      
+      - name: Type check
+        run: pnpm run typecheck
+      
+      - name: Build
+        run: pnpm run build
+```
+
+### Vercel Integration
+
+1. **Enable Build Checks**: Configure Vercel to require successful builds before deployment
+2. **Use Preview Deployments**: Test changes in preview environments first
+3. **Monitor Build Logs**: Set up alerts for build failures
+
+## Dependency Management Strategies
+
+### 1. Lock File Management
+
+- **Always commit** `pnpm-lock.yaml` to version control
+- **Use `--frozen-lockfile`** in production environments
+- **Regularly update** dependencies in controlled batches
+
+### 2. Package Version Strategy
+
+```json
+// package.json - Be specific with major versions
+{
+  "dependencies": {
+    "ai": "^5.0.0",                    // Pin major version
+    "@ai-sdk/openai": "^2.0.0",       // Pin major version
+    "@ai-sdk/google": "^2.0.0"        // Pin major version
+  }
+}
+```
+
+### 3. Breaking Change Monitoring
+
+- **Subscribe** to package release notes
+- **Test updates** in staging environment first
+- **Read migration guides** for major version updates
+
+## Common Pitfalls and Solutions
+
+### 1. Import/Export Mismatches
+
+**Problem**: Package exports change between versions
+**Solution**: Always verify exports in package documentation
+
+### 2. Environment Differences
+
+**Problem**: Different behavior between local and production
+**Solution**: Use exact Node.js versions and environment variables
+
+### 3. Case Sensitivity
+
+**Problem**: File imports work locally (macOS/Windows) but fail on Linux (Vercel)
+**Solution**: Always use exact case for file names and imports
+
+## Monitoring and Alerting
+
+### Build Failure Notifications
+
+Set up Slack/email notifications for:
+- Failed deployments
+- Build errors
+- Dependency security alerts
+
+### Health Checks
+
+Implement health check endpoints:
+
+```typescript
+// pages/api/health.ts
+export default function handler(req, res) {
+  res.status(200).json({ 
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    version: process.env.VERCEL_GIT_COMMIT_SHA || 'local'
+  });
+}
+```
+
+## Emergency Response
+
+### Quick Rollback Procedure
+
+1. **Vercel Dashboard**: Use instant rollback to previous deployment
+2. **Git Revert**: Revert problematic commits
+3. **Hotfix Branch**: Create emergency fix branch
+
+### Debugging Failed Deployments
+
+1. **Check Build Logs**: Look for specific error messages
+2. **Compare Environments**: Verify local vs. production differences
+3. **Dependency Diff**: Compare package versions between working and failing builds
+
+## Documentation Maintenance
+
+- **Update this guide** when encountering new issues
+- **Document workarounds** for third-party package issues
+- **Keep examples current** with latest package versions
+- **Review quarterly** for outdated information
+
+## Resources
+
+- [Vercel Build Troubleshooting](https://vercel.com/docs/deployments/troubleshoot-a-build)
+- [AI SDK Documentation](https://sdk.vercel.ai/docs)
+- [pnpm Documentation](https://pnpm.io/motivation)
+- [Next.js Deployment](https://nextjs.org/docs/deployment)

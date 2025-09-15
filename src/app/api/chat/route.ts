@@ -1,4 +1,6 @@
-import { convertToModelMessages, stepCountIs, streamText, UIMessage, openai, google } from "ai";
+import { convertToModelMessages, stepCountIs, streamText, UIMessage } from "ai";
+import { openai } from "@ai-sdk/openai";
+import { google } from "@ai-sdk/google";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { experimental_createMCPClient as createMCPClient } from "ai";
 import { withPayment } from "x402-mcp";
