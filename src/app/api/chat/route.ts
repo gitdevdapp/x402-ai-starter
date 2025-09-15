@@ -1,4 +1,4 @@
-import { convertToModelMessages, stepCountIs, streamText, UIMessage } from "ai";
+import { convertToModelMessages, stepCountIs, streamText, UIMessage, openai, google } from "ai";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { experimental_createMCPClient as createMCPClient } from "ai";
 import { withPayment } from "x402-mcp";
@@ -8,6 +8,18 @@ import { getOrCreatePurchaserAccount } from "@/lib/accounts";
 import { env } from "@/lib/env";
 
 export const maxDuration = 30;
+
+// Configure models with Vercel AI Gateway
+const models = {
+  "openai/gpt-4o": openai("gpt-4o", {
+    baseURL: "https://openai.vercel.ai/openai/v1",
+    apiKey: env.VERCEL_AI_GATEWAY_KEY,
+  }),
+  "google/gemini-2.0-flash-lite": google("gemini-2.0-flash-lite", {
+    baseURL: "https://openai.vercel.ai/google/v1",
+    apiKey: env.VERCEL_AI_GATEWAY_KEY,
+  }),
+};
 
 export const POST = async (request: Request) => {
   const { messages, model }: { messages: UIMessage[]; model: string } =
@@ -22,7 +34,7 @@ export const POST = async (request: Request) => {
   const tools = await mcpClient.tools();
 
   const result = streamText({
-    model,
+    model: models[model as keyof typeof models],
     tools: {
       ...tools,
       "hello-local": tool({

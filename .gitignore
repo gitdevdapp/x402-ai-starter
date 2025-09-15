@@ -34,6 +34,14 @@ yarn-error.log*
 .env*
 !.env.example
 
+# CDP sensitive credential files - NEVER commit these
+cdp_api_key.json
+cdp_wallet_secret.txt
+*.pem
+*.key
+*_secret.txt
+*_secret.json
+
 # vercel
 .vercel
 

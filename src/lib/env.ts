@@ -8,6 +8,7 @@ export const env = createEnv({
     CDP_API_KEY_SECRET: z.string(),
     NETWORK: z.enum(["base-sepolia", "base"]).default("base-sepolia"),
     URL: z.string().url().default("http://localhost:3000"),
+    VERCEL_AI_GATEWAY_KEY: z.string(),
   },
 
   /**
@@ -22,6 +23,7 @@ export const env = createEnv({
     URL: process.env.VERCEL_PROJECT_PRODUCTION_URL
       ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
       : undefined,
+    VERCEL_AI_GATEWAY_KEY: process.env.VERCEL_AI_GATEWAY_KEY,
   },
 
   /**

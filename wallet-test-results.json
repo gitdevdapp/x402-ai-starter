@@ -1,0 +1,103 @@
+{
+  "timestamp": "2025-09-15T21:13:02.392Z",
+  "tests": [
+    {
+      "name": "Create New Account",
+      "status": "PASS",
+      "timestamp": "2025-09-15T21:13:02.724Z",
+      "data": {
+        "address": "0x266AD065476A1bCAB334f36b4dBA7070264739Af"
+      }
+    },
+    {
+      "name": "Create Named Account",
+      "status": "PASS",
+      "timestamp": "2025-09-15T21:13:03.176Z",
+      "data": {
+        "address": "0x85C99694FD16d4702C4a87C01344a6A4bAed2a69",
+        "name": "TestWallet-1757970782724"
+      }
+    },
+    {
+      "name": "Get/Create Purchaser Account",
+      "status": "PASS",
+      "timestamp": "2025-09-15T21:13:03.312Z",
+      "data": {
+        "address": "0x71F40Da6Ddb17e368caFf8dE874708031ac1b41E"
+      }
+    },
+    {
+      "name": "Check USDC Balance",
+      "status": "PASS",
+      "timestamp": "2025-09-15T21:13:03.715Z",
+      "data": {
+        "balance": "[object Object]",
+        "symbol": "USDC",
+        "autoFunded": false
+      }
+    },
+    {
+      "name": "Get/Create Seller Account",
+      "status": "PASS",
+      "timestamp": "2025-09-15T21:13:03.837Z",
+      "data": {
+        "address": "0x1CBc42e3141e06eacAbfF49b4d06AbBc293Dc980"
+      }
+    },
+    {
+      "name": "Request ETH Faucet",
+      "status": "PASS",
+      "timestamp": "2025-09-15T21:13:04.434Z",
+      "data": {
+        "transactionHash": "0x99a6d4edff859106a441682f49d9d1461f1f7fe5ed953bc8d2c803222acee97c",
+        "explorerUrl": "https://sepolia.basescan.org/tx/0x99a6d4edff859106a441682f49d9d1461f1f7fe5ed953bc8d2c803222acee97c"
+      }
+    },
+    {
+      "name": "Request USDC Faucet",
+      "status": "PASS",
+      "timestamp": "2025-09-15T21:13:04.799Z",
+      "data": {
+        "transactionHash": "0x46eb3c19352de4c7e821d194b006478a5265ced429303b4342cb20064671b40f",
+        "explorerUrl": "https://sepolia.basescan.org/tx/0x46eb3c19352de4c7e821d194b006478a5265ced429303b4342cb20064671b40f"
+      }
+    },
+    {
+      "name": "Check ETH Balance",
+      "status": "PASS",
+      "timestamp": "2025-09-15T21:13:04.906Z",
+      "data": {
+        "address": "0x71F40Da6Ddb17e368caFf8dE874708031ac1b41E",
+        "balance": "0 ETH"
+      }
+    },
+    {
+      "name": "ETH Transfer",
+      "status": "SKIP",
+      "timestamp": "2025-09-15T21:13:04.906Z",
+      "error": "No ETH balance for transfer test"
+    },
+    {
+      "name": "Check USDC Balance",
+      "status": "PASS",
+      "timestamp": "2025-09-15T21:13:05.155Z",
+      "data": {
+        "address": "0x71F40Da6Ddb17e368caFf8dE874708031ac1b41E",
+        "balance": "1 USDC"
+      }
+    },
+    {
+      "name": "USDC Transfer",
+      "status": "FAIL",
+      "timestamp": "2025-09-15T21:13:05.446Z",
+      "error": "The total cost (gas * gas fee + value) of executing this transaction exceeds the balance of the account.\n\nThis error could arise when the account does not have enough funds to:\n - pay for the total gas fee,\n - pay for the value to send.\n \nThe cost of the transaction is calculated as `gas * gas fee + value`, where:\n - `gas` is the amount of gas needed for transaction to execute,\n - `gas fee` is the gas fee,\n - `value` is the amount of ether to send to the recipient.\n \nRequest Arguments:\n  from:  0x71F40Da6Ddb17e368caFf8dE874708031ac1b41E\n  to:    0x036CbD53842c5426634e7929541eC2318f3dCF7e\n  data:  0xa9059cbb0000000000000000000000001cbc42e3141e06eacabff49b4d06abbc293dc98000000000000000000000000000000000000000000000000000000000000186a0\n \nContract Call:\n  address:   0x036CbD53842c5426634e7929541eC2318f3dCF7e\n  function:  transfer(address recipient, uint256 amount)\n  args:              (0x1CBc42e3141e06eacAbfF49b4d06AbBc293Dc980, 100000)\n  sender:    0x71F40Da6Ddb17e368caFf8dE874708031ac1b41E\n\nDocs: https://viem.sh/docs/contract/writeContract\nDetails: insufficient funds for transfer\nVersion: viem@2.37.5"
+    }
+  ],
+  "summary": {
+    "total": 11,
+    "passed": 9,
+    "failed": 1,
+    "skipped": 1,
+    "success_rate": 90
+  }
+}
