@@ -18,6 +18,7 @@ This template built with [Next.js](https://nextjs.org), [AI SDK](https://ai-sdk.
 - Paywalled APIs
 - Paywalled pages (for bots)
 - Secure server managed wallets
+- Test commit verification - repository synced successfully ✅
 
 ## Tech Stack
 
