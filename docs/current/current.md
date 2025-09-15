@@ -1,6 +1,8 @@
-# AI SDK v5 Import Issue Fix
+# Current Deployment Issues & Fixes
 
-## Issue Description
+## Recently Fixed: AI SDK v5 Import Issue
+
+### Issue Description
 
 The Vercel build was failing with the following errors:
 
@@ -78,8 +80,61 @@ The fix was verified by:
 - ✅ Type safety maintained with TypeScript
 - ✅ All AI providers continue to work as expected
 
+## Current Issue: Missing Environment Variables
+
+### Issue Description
+
+Build is currently failing with:
+
+```
+❌ Invalid environment variables: [
+  {
+    code: 'invalid_type',
+    expected: 'string',
+    received: 'undefined',
+    path: [ 'VERCEL_AI_GATEWAY_KEY' ],
+    message: 'Required'
+  }
+]
+Error: Invalid environment variables
+```
+
+### Root Cause
+
+The application's environment validation schema requires `VERCEL_AI_GATEWAY_KEY` but this variable is not set in the Vercel deployment environment.
+
+### Immediate Fix Required
+
+Add the missing environment variable to Vercel:
+
+```bash
+# Via Vercel CLI
+vercel env add VERCEL_AI_GATEWAY_KEY
+
+# Or via Vercel Dashboard
+# Project Settings → Environment Variables → Add
+```
+
+### Required Environment Variables
+
+The following variables are **REQUIRED** for deployment (defined in `src/lib/env.ts`):
+
+```bash
+CDP_WALLET_SECRET=your-wallet-secret          # Required
+CDP_API_KEY_ID=your-api-key-id                # Required  
+CDP_API_KEY_SECRET=your-api-key-secret        # Required
+VERCEL_AI_GATEWAY_KEY=your-vercel-ai-key      # Required
+NETWORK=base-sepolia                          # Optional (defaults to base-sepolia)
+URL=https://your-domain.com                   # Optional (auto-generated from Vercel)
+```
+
+### Validation
+
+All environment variables are validated at build time. Missing required variables will cause deployment to fail.
+
 ## Next Steps
 
+- **IMMEDIATE**: Set `VERCEL_AI_GATEWAY_KEY` in Vercel environment variables
 - Deploy to Vercel to confirm production build success
 - Monitor for any related issues in production
-- See [deployment documentation](../deployment/README.md) for prevention strategies
+- See [deployment documentation](../deployment/README.md) for complete setup guide

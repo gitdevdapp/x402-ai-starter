@@ -2,26 +2,46 @@
 
 Detailed environment configuration for x402 deployment.
 
-## Required Variables
+## Environment Variables Overview
 
-### CDP Credentials
+⚠️ **CRITICAL**: All variables marked as "Required" MUST be set before deployment or the build will fail.
+
+### Required Variables (Build will fail without these)
+
 ```bash
-CDP_API_KEY_ID=your-api-key-id          # From CDP Portal
-CDP_API_KEY_SECRET=your-api-key-secret  # From CDP Portal
-CDP_WALLET_SECRET=your-wallet-secret    # From CDP Portal
+# CDP Blockchain Credentials (ALL REQUIRED)
+CDP_API_KEY_ID=your-api-key-id          # From CDP Portal - REQUIRED
+CDP_API_KEY_SECRET=your-api-key-secret  # From CDP Portal - REQUIRED
+CDP_WALLET_SECRET=your-wallet-secret    # From CDP Portal - REQUIRED
+
+# AI Gateway (REQUIRED for AI features)
+VERCEL_AI_GATEWAY_KEY=your-vercel-key   # Vercel AI Gateway Key - REQUIRED
 ```
 
-### Network Configuration
+### Optional Variables (Have defaults or auto-generated)
+
 ```bash
-NETWORK=base-sepolia  # Testnet (development)
-NETWORK=base         # Mainnet (production)
+# Network Configuration
+NETWORK=base-sepolia  # Defaults to "base-sepolia" if not set
+# NETWORK=base        # Use for mainnet/production
+
+# URL Configuration  
+URL=https://your-domain.com  # Auto-generated from Vercel if not set
 ```
 
-### Optional Variables
+## ⚠️ Pre-Deployment Validation
+
+**Before deploying, verify ALL required variables are set:**
+
 ```bash
-VERCEL_AI_GATEWAY_KEY=your-vercel-key  # For AI features
-URL=http://localhost:3000              # Custom URL
+# Check your environment variables
+echo "CDP_API_KEY_ID: ${CDP_API_KEY_ID:+SET}"
+echo "CDP_API_KEY_SECRET: ${CDP_API_KEY_SECRET:+SET}" 
+echo "CDP_WALLET_SECRET: ${CDP_WALLET_SECRET:+SET}"
+echo "VERCEL_AI_GATEWAY_KEY: ${VERCEL_AI_GATEWAY_KEY:+SET}"
 ```
+
+All should show "SET" - if any show blank, the deployment will fail.
 
 ## Getting CDP Credentials
 
@@ -61,19 +81,43 @@ Set via deployment platform environment variables:
 - AWS: Systems Manager Parameter Store
 - Docker: Environment variables or secrets
 
-## Validation
+## Build-Time Validation
 
-The application validates environment on startup:
+⚠️ **CRITICAL**: The application validates ALL environment variables during the build process, NOT at runtime.
+
+### Validation Schema (src/lib/env.ts)
 ```typescript
-// Automatic validation via src/lib/env.ts
+// Build will FAIL if any of these are missing or invalid:
 {
-  CDP_WALLET_SECRET: required string,
-  CDP_API_KEY_ID: required string, 
-  CDP_API_KEY_SECRET: required string,
-  NETWORK: enum ["base-sepolia", "base"] default "base-sepolia",
-  VERCEL_AI_GATEWAY_KEY: required string
+  CDP_WALLET_SECRET: required string,      // ❌ Build fails if missing
+  CDP_API_KEY_ID: required string,         // ❌ Build fails if missing 
+  CDP_API_KEY_SECRET: required string,     // ❌ Build fails if missing
+  VERCEL_AI_GATEWAY_KEY: required string,  // ❌ Build fails if missing
+  NETWORK: enum ["base-sepolia", "base"] default "base-sepolia",  // ✅ Has default
+  URL: string url() default "http://localhost:3000"              // ✅ Has default
 }
 ```
+
+### Validation Timing
+- **Local Development**: Validates when starting dev server (`npm run dev`)
+- **Build Process**: Validates during `npm run build` (this is where Vercel fails)
+- **NOT Runtime**: Missing variables cause build failure, not runtime errors
+
+### Common Validation Errors
+
+```bash
+❌ Invalid environment variables: [
+  {
+    code: 'invalid_type',
+    expected: 'string', 
+    received: 'undefined',
+    path: [ 'VERCEL_AI_GATEWAY_KEY' ],
+    message: 'Required'
+  }
+]
+```
+
+This error means the build process cannot find the required environment variable.
 
 ## Security Best Practices
 
@@ -91,17 +135,32 @@ The application validates environment on startup:
 
 ## Platform-Specific Setup
 
-### Vercel
+### Vercel (RECOMMENDED)
+
+**⚠️ IMPORTANT**: Set ALL required variables before deploying to avoid build failures.
+
 ```bash
-# Via CLI
+# Via CLI (Recommended - ensures all required vars are set)
 vercel env add CDP_API_KEY_ID
-vercel env add CDP_API_KEY_SECRET
+vercel env add CDP_API_KEY_SECRET  
 vercel env add CDP_WALLET_SECRET
-vercel env add NETWORK
+vercel env add VERCEL_AI_GATEWAY_KEY  # ← CRITICAL: Often forgotten!
+vercel env add NETWORK                # Optional, defaults to base-sepolia
 
 # Via Dashboard
-Project Settings → Environment Variables
+# 1. Go to your project dashboard
+# 2. Project Settings → Environment Variables
+# 3. Add each required variable with appropriate values
+# 4. Set environment scope (Production, Preview, Development)
 ```
+
+**Deployment Checklist for Vercel:**
+- [ ] `CDP_API_KEY_ID` set
+- [ ] `CDP_API_KEY_SECRET` set  
+- [ ] `CDP_WALLET_SECRET` set
+- [ ] `VERCEL_AI_GATEWAY_KEY` set ← **Most commonly missed!**
+- [ ] Test build locally: `npm run build`
+- [ ] Deploy: `vercel --prod`
 
 ### Docker
 ```dockerfile
@@ -175,12 +234,22 @@ cdp.evm.createAccount().then(acc =>
    - Set NETWORK to "base-sepolia" or "base"
    - Check for typos in network name
 
-4. **AI Gateway Issues**
+4. **AI Gateway Issues** (MOST COMMON)
    ```
-   Error: VERCEL_AI_GATEWAY_KEY required
+   ❌ Invalid environment variables: [
+     {
+       code: 'invalid_type',
+       expected: 'string',
+       received: 'undefined', 
+       path: [ 'VERCEL_AI_GATEWAY_KEY' ],
+       message: 'Required'
+     }
+   ]
    ```
-   - Set the AI gateway key for AI features
-   - Or disable AI features if not needed
+   **Solutions:**
+   - Set `VERCEL_AI_GATEWAY_KEY` in Vercel environment variables
+   - Get the key from Vercel dashboard → Storage → AI Gateway
+   - This is REQUIRED - cannot be disabled or made optional
 
 ### Debug Environment
 ```bash

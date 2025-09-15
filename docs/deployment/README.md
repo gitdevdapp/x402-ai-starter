@@ -1,208 +1,157 @@
-# Deployment Best Practices
+# Deployment Guide
 
-This document outlines best practices for preventing deployment issues, particularly those related to dependency management and build failures.
+Complete deployment guide for x402 with pre-deployment validation to prevent build failures.
 
-## AI SDK Dependency Management
+## 🚀 Quick Deploy Checklist
 
-### Understanding AI SDK v5 Architecture
+**Before deploying, complete ALL steps below to avoid build failures:**
 
-AI SDK v5 introduced a modular architecture where provider-specific functions are separated into individual packages:
+### Step 1: Environment Variables Setup
+- [ ] **Get CDP credentials** from [CDP Portal](https://portal.cdp.coinbase.com)
+  - [ ] `CDP_API_KEY_ID` 
+  - [ ] `CDP_API_KEY_SECRET`
+  - [ ] `CDP_WALLET_SECRET`
+- [ ] **Get Vercel AI Gateway key** from Vercel dashboard → Storage → AI Gateway
+  - [ ] `VERCEL_AI_GATEWAY_KEY` ← **Most commonly missed!**
 
-- **Core package**: `ai` - Contains core functionality like `streamText`, `generateText`, `tool`, etc.
-- **Provider packages**: `@ai-sdk/openai`, `@ai-sdk/google`, `@ai-sdk/anthropic`, etc.
+### Step 2: Set Environment Variables
 
-### Correct Import Patterns
-
-#### ✅ Correct Usage
-```typescript
-// Core AI SDK imports
-import { streamText, generateText, tool } from "ai";
-
-// Provider-specific imports
-import { openai } from "@ai-sdk/openai";
-import { google } from "@ai-sdk/google";
-import { anthropic } from "@ai-sdk/anthropic";
+#### Option A: Vercel CLI (Recommended)
+```bash
+vercel env add CDP_API_KEY_ID
+vercel env add CDP_API_KEY_SECRET
+vercel env add CDP_WALLET_SECRET
+vercel env add VERCEL_AI_GATEWAY_KEY
+vercel env add NETWORK  # Optional: defaults to base-sepolia
 ```
 
-#### ❌ Incorrect Usage (Will Cause Build Failures)
-```typescript
-// This will fail in AI SDK v5+
-import { streamText, openai, google } from "ai";
+#### Option B: Vercel Dashboard
+1. Go to your project dashboard
+2. **Project Settings** → **Environment Variables**  
+3. Add each required variable:
+   - `CDP_API_KEY_ID`
+   - `CDP_API_KEY_SECRET` 
+   - `CDP_WALLET_SECRET`
+   - `VERCEL_AI_GATEWAY_KEY`
+
+### Step 3: Pre-Deployment Validation
+```bash
+# Validate environment before deploying
+npm run validate-env
+
+# Run full pre-deployment check
+npm run pre-deploy
 ```
 
-## Pre-Deployment Validation
+### Step 4: Deploy
+```bash
+# Deploy to production
+vercel --prod
 
-### 1. Local Build Testing
+# Or use Vercel dashboard
+# Git push to main branch (auto-deploy)
+```
 
-Always test your build locally before deploying:
+## 🔧 Troubleshooting Failed Deployments
+
+### Common Build Failure: Missing Environment Variables
+
+**Error:**
+```
+❌ Invalid environment variables: [
+  {
+    code: 'invalid_type',
+    expected: 'string',
+    received: 'undefined',
+    path: [ 'VERCEL_AI_GATEWAY_KEY' ],
+    message: 'Required'
+  }
+]
+```
+
+**Solution:**
+1. Identify the missing variable (e.g., `VERCEL_AI_GATEWAY_KEY`)
+2. Set it in Vercel: `vercel env add VERCEL_AI_GATEWAY_KEY`
+3. Redeploy: `vercel --prod`
+
+### Debug Environment Issues
 
 ```bash
-# Test the production build
-pnpm run build
+# Check which variables are set locally
+npm run validate-env
 
-# Verify the build starts correctly
-pnpm start
+# Check variables in Vercel
+vercel env ls
+
+# Test build locally
+npm run build
 ```
 
-### 2. Dependency Audit
+## 📋 Environment Variable Reference
 
-Before adding or updating dependencies:
+### Required (Build fails without these)
+| Variable | Source | Description |
+|----------|--------|-------------|
+| `CDP_API_KEY_ID` | [CDP Portal](https://portal.cdp.coinbase.com) | API key identifier |
+| `CDP_API_KEY_SECRET` | CDP Portal | API key secret |
+| `CDP_WALLET_SECRET` | CDP Portal | Wallet secret key |
+| `VERCEL_AI_GATEWAY_KEY` | Vercel Dashboard → Storage → AI Gateway | AI gateway access key |
+
+### Optional (Have defaults)
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `NETWORK` | `base-sepolia` | Blockchain network (`base-sepolia` or `base`) |
+| `URL` | Auto-generated | Application URL (Vercel auto-generates) |
+
+## 🛠 Development vs Production
+
+### Development (.env.local)
+```bash
+# Use testnet and development keys
+CDP_API_KEY_ID=cdp_api_key_dev_123
+CDP_API_KEY_SECRET=dev-secret-key
+CDP_WALLET_SECRET=dev-wallet-secret
+VERCEL_AI_GATEWAY_KEY=dev-ai-key
+NETWORK=base-sepolia
+```
+
+### Production (Vercel Environment Variables)
+```bash
+# Use production keys and mainnet
+CDP_API_KEY_ID=cdp_api_key_prod_456
+CDP_API_KEY_SECRET=prod-secret-key
+CDP_WALLET_SECRET=prod-wallet-secret  
+VERCEL_AI_GATEWAY_KEY=prod-ai-key
+NETWORK=base
+```
+
+## 🔒 Security Best Practices
+
+1. **Separate Credentials**: Use different CDP credentials for development vs production
+2. **Secret Management**: Never commit credentials to git
+3. **Access Control**: Limit access to production environment variables
+4. **Rotation**: Regularly rotate API keys and secrets
+5. **Monitoring**: Monitor for unauthorized access attempts
+
+## 📖 Detailed Documentation
+
+- **[Environment Setup](./environment-setup.md)**: Complete environment configuration guide
+- **[Troubleshooting](./troubleshooting.md)**: Common issues and solutions
+- **[Security](../archive/original-future/security-improvements.md)**: Security best practices
+
+## 🚨 Emergency Deployment Fix
+
+If deployment is failing right now:
 
 ```bash
-# Check what's exported from a package
-node -e "console.log(Object.keys(require('package-name')))"
+# 1. Quick validation
+npm run validate-env
 
-# Verify package documentation
-pnpm info package-name
+# 2. If VERCEL_AI_GATEWAY_KEY is missing:
+vercel env add VERCEL_AI_GATEWAY_KEY
+
+# 3. Redeploy immediately  
+vercel --prod
 ```
 
-### 3. TypeScript Validation
-
-Enable strict type checking to catch import errors early:
-
-```json
-// tsconfig.json
-{
-  "compilerOptions": {
-    "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "exactOptionalPropertyTypes": true
-  }
-}
-```
-
-## Continuous Integration Best Practices
-
-### GitHub Actions Workflow
-
-Create `.github/workflows/ci.yml`:
-
-```yaml
-name: CI
-on: [push, pull_request]
-
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v2
-        with:
-          version: 9.15.4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'pnpm'
-      
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-      
-      - name: Type check
-        run: pnpm run typecheck
-      
-      - name: Build
-        run: pnpm run build
-```
-
-### Vercel Integration
-
-1. **Enable Build Checks**: Configure Vercel to require successful builds before deployment
-2. **Use Preview Deployments**: Test changes in preview environments first
-3. **Monitor Build Logs**: Set up alerts for build failures
-
-## Dependency Management Strategies
-
-### 1. Lock File Management
-
-- **Always commit** `pnpm-lock.yaml` to version control
-- **Use `--frozen-lockfile`** in production environments
-- **Regularly update** dependencies in controlled batches
-
-### 2. Package Version Strategy
-
-```json
-// package.json - Be specific with major versions
-{
-  "dependencies": {
-    "ai": "^5.0.0",                    // Pin major version
-    "@ai-sdk/openai": "^2.0.0",       // Pin major version
-    "@ai-sdk/google": "^2.0.0"        // Pin major version
-  }
-}
-```
-
-### 3. Breaking Change Monitoring
-
-- **Subscribe** to package release notes
-- **Test updates** in staging environment first
-- **Read migration guides** for major version updates
-
-## Common Pitfalls and Solutions
-
-### 1. Import/Export Mismatches
-
-**Problem**: Package exports change between versions
-**Solution**: Always verify exports in package documentation
-
-### 2. Environment Differences
-
-**Problem**: Different behavior between local and production
-**Solution**: Use exact Node.js versions and environment variables
-
-### 3. Case Sensitivity
-
-**Problem**: File imports work locally (macOS/Windows) but fail on Linux (Vercel)
-**Solution**: Always use exact case for file names and imports
-
-## Monitoring and Alerting
-
-### Build Failure Notifications
-
-Set up Slack/email notifications for:
-- Failed deployments
-- Build errors
-- Dependency security alerts
-
-### Health Checks
-
-Implement health check endpoints:
-
-```typescript
-// pages/api/health.ts
-export default function handler(req, res) {
-  res.status(200).json({ 
-    status: 'healthy',
-    timestamp: new Date().toISOString(),
-    version: process.env.VERCEL_GIT_COMMIT_SHA || 'local'
-  });
-}
-```
-
-## Emergency Response
-
-### Quick Rollback Procedure
-
-1. **Vercel Dashboard**: Use instant rollback to previous deployment
-2. **Git Revert**: Revert problematic commits
-3. **Hotfix Branch**: Create emergency fix branch
-
-### Debugging Failed Deployments
-
-1. **Check Build Logs**: Look for specific error messages
-2. **Compare Environments**: Verify local vs. production differences
-3. **Dependency Diff**: Compare package versions between working and failing builds
-
-## Documentation Maintenance
-
-- **Update this guide** when encountering new issues
-- **Document workarounds** for third-party package issues
-- **Keep examples current** with latest package versions
-- **Review quarterly** for outdated information
-
-## Resources
-
-- [Vercel Build Troubleshooting](https://vercel.com/docs/deployments/troubleshoot-a-build)
-- [AI SDK Documentation](https://sdk.vercel.ai/docs)
-- [pnpm Documentation](https://pnpm.io/motivation)
-- [Next.js Deployment](https://nextjs.org/docs/deployment)
+The most common cause of deployment failures is missing `VERCEL_AI_GATEWAY_KEY`.
