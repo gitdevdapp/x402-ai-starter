@@ -49,18 +49,22 @@ export async function GET(request: NextRequest) {
       balances = { balances: [] };
     }
 
-    // Extract USDC and ETH balances
-    const usdcBalance = balances.balances.find(
-      (balance) => balance.token.symbol === "USDC"
+    // Extract USDC and ETH balances with null safety
+    const usdcBalance = balances?.balances?.find(
+      (balance) => balance?.token?.symbol === "USDC"
     );
     
-    const ethBalance = balances.balances.find(
-      (balance) => balance.token.symbol === "ETH"
+    const ethBalance = balances?.balances?.find(
+      (balance) => balance?.token?.symbol === "ETH"
     );
 
+    // Ensure we always return valid numbers
+    const usdcAmount = usdcBalance?.amount ? Number(usdcBalance.amount) / 1000000 : 0;
+    const ethAmount = ethBalance?.amount ? Number(ethBalance.amount) / 1000000000000000000 : 0;
+
     return NextResponse.json({
-      usdc: usdcBalance ? Number(usdcBalance.amount) / 1000000 : 0, // Convert from µUSDC to USDC
-      eth: ethBalance ? Number(ethBalance.amount) / 1000000000000000000 : 0, // Convert from wei to ETH
+      usdc: isNaN(usdcAmount) ? 0 : usdcAmount, // Convert from µUSDC to USDC
+      eth: isNaN(ethAmount) ? 0 : ethAmount, // Convert from wei to ETH
       lastUpdated: new Date().toISOString(),
       address: validation.data.address
     });

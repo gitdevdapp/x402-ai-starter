@@ -31,20 +31,24 @@ export async function GET(request: NextRequest) {
             network: env.NETWORK,
           });
 
-          const usdcBalance = balances.balances.find(
-            (balance) => balance.token.symbol === "USDC"
+          const usdcBalance = balances?.balances?.find(
+            (balance) => balance?.token?.symbol === "USDC"
           );
           
-          const ethBalance = balances.balances.find(
-            (balance) => balance.token.symbol === "ETH"
+          const ethBalance = balances?.balances?.find(
+            (balance) => balance?.token?.symbol === "ETH"
           );
+
+          // Ensure we always return valid numbers
+          const usdcAmount = usdcBalance?.amount ? Number(usdcBalance.amount) / 1000000 : 0;
+          const ethAmount = ethBalance?.amount ? Number(ethBalance.amount) / 1000000000000000000 : 0;
 
           return {
             name: account.name || "Unnamed Wallet",
             address: account.address,
             balances: {
-              usdc: usdcBalance ? Number(usdcBalance.amount) / 1000000 : 0,
-              eth: ethBalance ? Number(ethBalance.amount) / 1000000000000000000 : 0,
+              usdc: isNaN(usdcAmount) ? 0 : usdcAmount,
+              eth: isNaN(ethAmount) ? 0 : ethAmount,
             },
             lastUpdated: new Date().toISOString()
           };

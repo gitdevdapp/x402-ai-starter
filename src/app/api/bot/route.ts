@@ -8,12 +8,33 @@ import { waitUntil } from "@vercel/functions";
 
 type Fetch = (input: RequestInfo, init?: RequestInit) => Promise<Response>;
 
-const account = await getOrCreatePurchaserAccount();
-const walletClient = createWalletClient({
-  chain,
-  transport: http(),
-  account,
-});
+// ✅ Lazy initialization with caching to fix Vercel client-side exception
+let walletClientCache: any = null;
+let walletClientPromise: Promise<any> | null = null;
+
+async function getWalletClient() {
+  if (walletClientCache) return walletClientCache;
+  if (walletClientPromise) return walletClientPromise;
+
+  walletClientPromise = (async () => {
+    try {
+      const account = await getOrCreatePurchaserAccount();
+      walletClientCache = createWalletClient({
+        chain,
+        transport: http(),
+        account,
+      });
+      return walletClientCache;
+    } catch (error) {
+      console.error("Failed to initialize wallet client:", error);
+      // Reset promise to allow retry
+      walletClientPromise = null;
+      throw error;
+    }
+  })();
+
+  return walletClientPromise;
+}
 
 export async function GET(request: NextRequest) {
   const enablePayment =
@@ -48,14 +69,17 @@ export async function GET(request: NextRequest) {
         console.log(...args);
       };
 
-      const loggedFetch = makeLoggedFetch(log);
-      const fetch = enablePayment
-        ? wrapFetchWithPayment(loggedFetch, walletClient as any) // TODO: fix type
-        : loggedFetch;
-
       const jobPromise = (async () => {
         try {
           log("initiating job", job);
+          
+          // ✅ Get wallet client dynamically when needed
+          const walletClient = enablePayment ? await getWalletClient() : null;
+          
+          const loggedFetch = makeLoggedFetch(log);
+          const fetch = enablePayment && walletClient
+            ? wrapFetchWithPayment(loggedFetch, walletClient as any) // TODO: fix type
+            : loggedFetch;
           let result;
           if (job === "scrape") {
             result = await scrapeJob(fetch, isBot || actAsScraper);

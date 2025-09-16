@@ -8,10 +8,10 @@ import { cn } from "@/lib/utils";
 interface Wallet {
   name: string;
   address: string;
-  balances: {
-    usdc: number;
-    eth: number;
-  };
+  balances?: {
+    usdc?: number | null;
+    eth?: number | null;
+  } | null;
   lastUpdated: string;
   error?: string;
 }
@@ -47,8 +47,11 @@ export function WalletCard({ wallet, isSelected, onSelect, onRefreshBalance }: W
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
   };
 
-  const formatBalance = (balance: number) => {
-    return balance.toFixed(4);
+  const formatBalance = (balance: number | null | undefined) => {
+    if (balance === null || balance === undefined || isNaN(balance)) {
+      return "0.0000";
+    }
+    return Number(balance).toFixed(4);
   };
 
   const getTimestamp = () => {
@@ -104,13 +107,13 @@ export function WalletCard({ wallet, isSelected, onSelect, onRefreshBalance }: W
             <div>
               <div className="text-xs text-gray-500">USDC</div>
               <div className="font-mono text-sm">
-                ${formatBalance(wallet.balances.usdc)}
+                ${formatBalance(wallet.balances?.usdc)}
               </div>
             </div>
             <div>
               <div className="text-xs text-gray-500">ETH</div>
               <div className="font-mono text-sm">
-                {formatBalance(wallet.balances.eth)} ETH
+                {formatBalance(wallet.balances?.eth)} ETH
               </div>
             </div>
           </div>

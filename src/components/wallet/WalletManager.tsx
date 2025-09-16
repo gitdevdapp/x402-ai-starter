@@ -10,10 +10,10 @@ import { Loader } from "@/components/ai-elements/loader";
 interface Wallet {
   name: string;
   address: string;
-  balances: {
-    usdc: number;
-    eth: number;
-  };
+  balances?: {
+    usdc?: number | null;
+    eth?: number | null;
+  } | null;
   lastUpdated: string;
   error?: string;
 }
@@ -105,8 +105,8 @@ export function WalletManager() {
             ? {
                 ...wallet,
                 balances: {
-                  usdc: balanceData.usdc,
-                  eth: balanceData.eth,
+                  usdc: balanceData.usdc ?? 0,
+                  eth: balanceData.eth ?? 0,
                 },
                 lastUpdated: balanceData.lastUpdated,
                 error: undefined
