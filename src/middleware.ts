@@ -1,103 +1,63 @@
 import { NextRequest, NextResponse } from "next/server";
-import { paymentMiddleware } from "x402-next";
-import { facilitator } from "@coinbase/x402";
-import { env } from "./lib/env";
-import { getOrCreateSellerAccount } from "./lib/accounts";
+import { needsPaymentValidation, isProtectedRoute } from "./lib/middleware-utils";
 
-const network = env.NETWORK;
-
-// Cache for seller account to avoid recreating on every request
-let sellerAccountCache: string | null = null;
-let sellerAccountPromise: Promise<string> | null = null;
-
-async function getSellerAccountAddress(): Promise<string> {
-  if (sellerAccountCache) {
-    return sellerAccountCache;
-  }
-  
-  if (sellerAccountPromise) {
-    return sellerAccountPromise;
-  }
-  
-  sellerAccountPromise = (async () => {
-    try {
-      const account = await getOrCreateSellerAccount();
-      sellerAccountCache = account.address;
-      return account.address;
-    } catch (error) {
-      // Reset promise on error to allow retry
-      sellerAccountPromise = null;
-      throw error;
-    }
-  })();
-  
-  return sellerAccountPromise;
-}
-
-function createX402Middleware(sellerAddress: string) {
-  return paymentMiddleware(
-    sellerAddress,
-    {
-      // pages
-      "/blog": {
-        price: "$0.001",
-        network,
-        config: {
-          description: "Access to protected content",
-        },
-      },
-      // api routes
-      "/api/add": {
-        price: "$0.005",
-        network,
-        config: {
-          description: "Access to protected content",
-        },
-      },
-    },
-    facilitator
-  );
-}
-
+/**
+ * Lightweight middleware that delegates payment validation to API routes
+ * This approach reduces the Edge Function bundle size by avoiding heavy dependencies
+ */
 export default async function middleware(request: NextRequest) {
   try {
-    // Initialize seller account if needed
-    const sellerAddress = await getSellerAccountAddress();
-    const x402Middleware = createX402Middleware(sellerAddress);
+    const pathname = request.nextUrl.pathname;
     
-    // run middleware for all api routes
-    if (request.nextUrl.pathname.startsWith("/api")) {
-      return x402Middleware(request);
-    } else {
-      // for normal pages, only run middleware if it's a bot
-      const isScraper = checkIsScraper(request);
-      if (isScraper) {
-        return x402Middleware(request);
-      } else {
-        return NextResponse.next();
-      }
+    // Skip middleware for non-protected routes
+    if (!isProtectedRoute(pathname)) {
+      return NextResponse.next();
     }
+    
+    // Check if this request needs payment validation
+    if (!needsPaymentValidation(request)) {
+      return NextResponse.next();
+    }
+    
+    // Delegate to payment validation API route
+    const paymentValidationUrl = new URL("/api/payment-validate", request.url);
+    
+    // Preserve original path information
+    paymentValidationUrl.searchParams.set("original_path", pathname);
+    
+    // Forward the original request to the payment validation endpoint
+    const paymentRequest = new Request(paymentValidationUrl, {
+      method: request.method,
+      headers: request.headers,
+      // Only include body for non-GET requests
+      body: request.method !== "GET" ? request.body : undefined,
+    });
+    
+    // Get the validation response
+    const response = await fetch(paymentRequest);
+    
+    // If payment validation passes, allow the request to continue
+    if (response.ok) {
+      return NextResponse.next();
+    }
+    
+    // If payment validation fails, return an error response
+    const responseText = await response.text();
+    return new NextResponse(responseText, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: response.headers,
+    });
+    
   } catch (error) {
-    // If seller account creation fails, log error and allow request to continue
+    // If payment validation fails for any reason, log error and allow request to continue
     // This prevents middleware from completely blocking the application
-    console.error("Middleware error - seller account initialization failed:", error);
+    console.error("Middleware error - payment validation failed:", error);
     
     // For critical paths, you might want to return an error response instead
     // For now, we'll allow the request to continue without payment middleware
     return NextResponse.next();
   }
-}
-
-function checkIsScraper(request: NextRequest) {
-  const scraperRegex =
-    /Bot|AI2Bot|Ai2Bot-Dolma|aiHitBot|Amazonbot|anthropic-ai|Applebot|Applebot-Extended|Brightbot 1.0|Bytespider|CCBot|ChatGPT-User|Claude-Web|ClaudeBot|cohere-ai|cohere-training-data-crawler|Cotoyogi|Crawlspace|Diffbot|DuckAssistBot|FacebookBot|Factset_spyderbot|FirecrawlAgent|FriendlyCrawler|Google-Extended|GoogleOther|GoogleOther-Image|GoogleOther-Video|GPTBot|iaskspider\/2.0|ICC-Crawler|ImagesiftBot|img2dataset|ISSCyberRiskCrawler|Kangaroo Bot|meta-externalagent|Meta-ExternalAgent|meta-externalfetcher|Meta-ExternalFetcher|NovaAct|OAI-SearchBot|omgili|omgilibot|Operator|PanguBot|Perplexity-User|PerplexityBot|PetalBot|Scrapy|SemrushBot-OCOB|SemrushBot-SWA|Sidetrade indexer bot|TikTokSpider|Timpibot|VelenPublicWebCrawler|Webzio-Extended|YouBot/i;
-
-  const userAgent = request.headers.get("user-agent");
-  const botUserAgent = scraperRegex.test(userAgent ?? "");
-
-  const manualBot = request.nextUrl.searchParams.get("bot") === "true";
-
-  return botUserAgent || manualBot;
 }
 
 export const config = {

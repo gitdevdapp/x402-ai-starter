@@ -9,6 +9,7 @@ export const env = createEnv({
     NETWORK: z.enum(["base-sepolia", "base"]).default("base-sepolia"),
     URL: z.string().url().default("http://localhost:3000"),
     VERCEL_AI_GATEWAY_KEY: z.string(),
+    SELLER_ADDRESS: z.string().optional(),
   },
 
   /**
@@ -24,6 +25,7 @@ export const env = createEnv({
       ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
       : undefined,
     VERCEL_AI_GATEWAY_KEY: process.env.VERCEL_AI_GATEWAY_KEY,
+    SELLER_ADDRESS: process.env.SELLER_ADDRESS,
   },
 
   /**
