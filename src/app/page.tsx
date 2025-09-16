@@ -38,6 +38,8 @@ import {
   ToolOutput,
 } from "@/components/ai-elements/tool";
 
+import { WalletManager } from "@/components/wallet/WalletManager";
+
 const models = [
   {
     name: "GPT 4o",
@@ -204,4 +206,75 @@ const ChatBotDemo = () => {
   );
 };
 
-export default ChatBotDemo;
+export default function HomePage() {
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <header className="bg-white border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center py-6">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">x402 Payment Demo</h1>
+              <p className="text-gray-600 mt-1">Create wallets, receive testnet funds, and test AI payments</p>
+            </div>
+            <div className="text-sm text-gray-500">
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                Base Sepolia Testnet
+              </span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Wallet Section */}
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900 mb-2">Wallet Management</h2>
+              <p className="text-gray-600 text-sm">
+                Create and manage your testnet wallets, check balances, and request free testnet funds.
+              </p>
+            </div>
+            <WalletManager />
+          </div>
+
+          {/* AI Chat Section */}
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900 mb-2">AI Chat with Payments</h2>
+              <p className="text-gray-600 text-sm">
+                Interact with AI models and test payment-gated features using your wallets.
+              </p>
+            </div>
+            <div className="bg-white rounded-lg border min-h-[600px]">
+              <ChatBotDemo />
+            </div>
+          </div>
+        </div>
+
+        {/* Footer Info */}
+        <div className="mt-12 text-center">
+          <div className="max-w-3xl mx-auto">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">How It Works</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm text-gray-600">
+              <div>
+                <div className="font-medium text-gray-900 mb-2">1. Create Wallets</div>
+                <p>Generate new wallets for different purposes: purchasing, selling, or custom use cases.</p>
+              </div>
+              <div>
+                <div className="font-medium text-gray-900 mb-2">2. Get Testnet Funds</div>
+                <p>Request free USDC and ETH from the Base Sepolia testnet faucet to test transactions.</p>
+              </div>
+              <div>
+                <div className="font-medium text-gray-900 mb-2">3. Test AI Payments</div>
+                <p>Use your funded wallets to interact with AI models and test the x402 payment protocol.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}

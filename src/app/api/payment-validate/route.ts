@@ -44,22 +44,13 @@ function createX402Middleware(sellerAddress: string) {
 
 export async function GET(request: NextRequest) {
   try {
-    // For testing: temporarily return success to verify middleware delegation works
-    // In production, this would have the full x402 middleware logic
-    console.log("Payment validation endpoint called for:", request.url);
+    const sellerAddress = getSellerAddress();
+    const x402Middleware = createX402Middleware(sellerAddress);
     
-    // Simulate payment validation logic
-    const originalPath = request.nextUrl.searchParams.get("original_path");
-    console.log("Original path:", originalPath);
+    // Process the payment validation
+    const response = await x402Middleware(request);
     
-    // For now, return success to test the flow
-    return NextResponse.json({ status: "payment validated", path: originalPath });
-    
-    // TODO: Uncomment when CDP credentials are available
-    // const sellerAddress = getSellerAddress();
-    // const x402Middleware = createX402Middleware(sellerAddress);
-    // const response = await x402Middleware(request);
-    // return response;
+    return response;
   } catch (error) {
     console.error("Payment validation error:", error);
     return NextResponse.json(
