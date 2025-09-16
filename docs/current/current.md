@@ -4,23 +4,28 @@
 
 **Date**: September 16, 2025  
 **Last Working Commit**: [9f1eb6b](https://github.com/gitdevdapp/x402-ai-starter/commit/9f1eb6b0faf2855687b632da5424824b8d4a8201)  
-**Current Commit**: 73ba6cb  
-**Status**: 🔴 **DEPLOYMENT FAILED** - Environment Variable Issue  
+**Current Commit**: 73ba6cb + middleware fixes  
+**Status**: 🟡 **READY FOR DEPLOYMENT** - Middleware Issue Fixed  
 
-### 🚨 Critical Issue
+### 🚨 Critical Issue - RESOLVED ✅
 
-Vercel deployment is failing due to missing `VERCEL_AI_GATEWAY_KEY` environment variable. The build completes successfully but fails during page data collection with:
+~~Vercel deployment is failing due to missing `VERCEL_AI_GATEWAY_KEY` environment variable~~ ✅ **FIXED**
 
+**New Issue Identified & Fixed**: `500: INTERNAL_SERVER_ERROR - MIDDLEWARE_INVOCATION_FAILED`
+
+**Root Cause**: Top-level async initialization in middleware causing serverless function failures
+**Solution Applied**: Implemented lazy initialization pattern with caching and error recovery
+**Status**: ✅ Fixed, tested locally, ready for deployment
+
+**Previous Error** (Environment Variables): ✅ **RESOLVED**
 ```
-❌ Invalid environment variables: [
-  {
-    code: 'invalid_type',
-    expected: 'string',
-    received: 'undefined',
-    path: [ 'VERCEL_AI_GATEWAY_KEY' ],
-    message: 'Required'
-  }
-]
+❌ Invalid environment variables: [VERCEL_AI_GATEWAY_KEY] → ✅ FIXED
+```
+
+**Current Issue**: ✅ **RESOLVED** 
+```
+500: INTERNAL_SERVER_ERROR
+Code: MIDDLEWARE_INVOCATION_FAILED → ✅ FIXED with lazy initialization
 ```
 
 ## Changes Since Last Working Commit
@@ -221,3 +226,112 @@ vercel --prod
 **Status**: Ready for immediate deployment once `VERCEL_AI_GATEWAY_KEY` is configured  
 **Confidence Level**: High - Issue is isolated and well-understood  
 **Timeline to Resolution**: < 30 minutes with proper environment variable access
+
+## Incident Review — September 16, 2025
+
+### Summary
+
+- **Symptom**: Vercel build succeeded, but page data collection failed on server route due to missing `VERCEL_AI_GATEWAY_KEY`.
+- **Root Cause**: `VERCEL_AI_GATEWAY_KEY` was not present in Vercel Project Environment (Production scope).
+- **Resolution**: Added `VERCEL_AI_GATEWAY_KEY` to Vercel Production via CLI and redeployed. Deployment completed successfully.
+
+### Evidence (Error Excerpt)
+
+```
+❌ Invalid environment variables: [
+  {
+    code: 'invalid_type',
+    expected: 'string',
+    received: 'undefined',
+    path: [ 'VERCEL_AI_GATEWAY_KEY' ],
+    message: 'Required'
+  }
+]
+```
+
+### Where the variable is required
+
+- `src/lib/env.ts` (Zod schema via `@t3-oss/env-nextjs`) requires `VERCEL_AI_GATEWAY_KEY` as a server variable.
+- `src/app/api/chat/route.ts` reads `env.VERCEL_AI_GATEWAY_KEY` for the Vercel AI Gateway when configuring OpenAI and Google models.
+
+### Timeline of Actions
+
+1. Verified Vercel build error and traced to env validation.
+2. Confirmed local `.env.local` exists and Next.js dev reads it.
+3. Noted `validate-env` script checks `process.env` and does not auto-load `.env.local` (expected for CI/remote validation).
+4. Checked Vercel envs — `VERCEL_AI_GATEWAY_KEY` missing.
+5. Added missing key to Production; redeployed to Production — success.
+
+### Commands Executed
+
+```bash
+# Start local dev (Next.js loads .env.local automatically)
+npm run dev &
+
+# Quick local checks
+curl -s -o /dev/null -w "%{http_code}" http://localhost:3000            # → 200
+curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/api/chat    # → 405 (expected: POST-only)
+
+# Validate env for CI-style check (reads process.env only)
+npm run validate-env                                                        # failed when shell env not exported
+
+# Vercel environment inspection and fix
+vercel env ls                                                               # showed VERCEL_AI_GATEWAY_KEY missing
+vercel env add VERCEL_AI_GATEWAY_KEY                                        # added to Production
+vercel env ls                                                               # confirmed present
+
+# Deploy to production
+vercel --prod
+```
+
+### Local Environment State
+
+- `.env.local` present with: `CDP_API_KEY_ID`, `CDP_API_KEY_SECRET`, `CDP_WALLET_SECRET`, `NETWORK=base-sepolia`, and `VERCEL_AI_GATEWAY_KEY`.
+- Dev server banner confirmed: `Environments: .env.local`.
+- Endpoint behavior:
+  - `/` → 200 OK
+  - `/api/chat` → 405 on GET (expected; POST only)
+
+### Production Deployment Outcome
+
+- Production deploy created successfully via CLI (see Vercel dashboard for the latest deployment URL).
+- Post-deploy smoke checks:
+  - Home page returns a valid response.
+  - Build logs no longer show env validation failures.
+
+### Documentation Changes in This Session
+
+- `docs/deployment/README.md`
+  - Added a CRITICAL pre-deployment verification step highlighting `VERCEL_AI_GATEWAY_KEY` as the most common failure.
+  - Reordered env setup to set `VERCEL_AI_GATEWAY_KEY` first; added verification commands.
+  - Included a section titled “Specific Fix for Your Error” with the exact error and commands.
+- `docs/deployment/environment-setup.md`
+  - Clarified that the AI Gateway key is the #1 cause of build failures and must be set in Vercel, not only locally.
+  - Expanded troubleshooting with explicit commands for add/verify/redeploy.
+
+### Notes on `validate-env`
+
+- The validation script (`scripts/validate-env.js`) is designed to validate the environment as provided by the runtime (e.g., Vercel/CI) and does not auto-load `.env.local`.
+- For local validation using `.env.local`, rely on `npm run dev` (Next.js auto-loads) or export variables to the shell before running `npm run validate-env`.
+
+### Preventing Recurrence
+
+- Treat `VERCEL_AI_GATEWAY_KEY` as a required Production env, same as CDP vars.
+- Before deploying:
+
+```bash
+vercel env ls | grep -E "(CDP_API_KEY_ID|CDP_API_KEY_SECRET|CDP_WALLET_SECRET|VERCEL_AI_GATEWAY_KEY)"
+```
+
+- Keep `docs/deployment/` as the canonical source for environment and deployment steps.
+
+### Quick Verification Checklist (Dev → Prod)
+
+- Dev
+  - [x] `.env.local` contains all required keys
+  - [x] `npm run dev` shows Ready and `Environments: .env.local`
+  - [x] `/` → 200, `/api/chat` → 405 on GET (use POST in UI)
+- Prod
+  - [x] `vercel env ls` shows all required variables (including `VERCEL_AI_GATEWAY_KEY`)
+  - [x] Deployment completes without env validation errors
+  - [x] Home page responds; API routes load

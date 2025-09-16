@@ -4,6 +4,34 @@
 **Last Working**: [Commit 9f1eb6b](https://github.com/gitdevdapp/x402-ai-starter/commit/9f1eb6b0faf2855687b632da5424824b8d4a8201)  
 **Solution Time**: < 5 minutes
 
+## ⚠️ CRITICAL: Pre-Deployment Verification
+
+**BEFORE deploying, run this command to avoid build failures:**
+
+```bash
+# Verify ALL required environment variables are set in Vercel
+vercel env ls
+
+# You MUST see these 4 variables listed:
+# - CDP_API_KEY_ID
+# - CDP_API_KEY_SECRET  
+# - CDP_WALLET_SECRET
+# - VERCEL_AI_GATEWAY_KEY ← Most commonly missing!
+```
+
+**If `VERCEL_AI_GATEWAY_KEY` is missing, the build WILL FAIL** with this exact error:
+```
+❌ Invalid environment variables: [
+  {
+    code: 'invalid_type',
+    expected: 'string',
+    received: 'undefined',
+    path: [ 'VERCEL_AI_GATEWAY_KEY' ],
+    message: 'Required'
+  }
+]
+```
+
 ## 🚨 Emergency Fix (Deploy Now)
 
 ```bash
@@ -23,32 +51,54 @@ curl -I https://your-domain.vercel.app/api/chat
 **Follow ALL steps below to ensure successful deployment:**
 
 ### Step 1: Environment Variables Setup
+
+#### 🔥 CRITICAL: Get Vercel AI Gateway Key FIRST
+- [ ] **Get Vercel AI Gateway key** - [Vercel Dashboard](https://vercel.com/dashboard) → **Storage** → **AI Gateway**
+  - [ ] `VERCEL_AI_GATEWAY_KEY` ← **#1 CAUSE OF BUILD FAILURES!**
+  - [ ] **Required for AI features** (OpenAI GPT-4o, Google Gemini)
+  - [ ] **Must be set in Vercel environment variables, not just locally**
+
+#### Get CDP Credentials
 - [ ] **Get CDP credentials** from [CDP Portal](https://portal.cdp.coinbase.com)
   - [ ] `CDP_API_KEY_ID` 
   - [ ] `CDP_API_KEY_SECRET`
   - [ ] `CDP_WALLET_SECRET`
-- [ ] **Get Vercel AI Gateway key** from Vercel dashboard → Storage → AI Gateway
-  - [ ] `VERCEL_AI_GATEWAY_KEY` ← **Most commonly missed!**
 
 ### Step 2: Set Environment Variables
 
 #### Option A: Vercel CLI (Recommended)
 ```bash
+# Set VERCEL_AI_GATEWAY_KEY FIRST (most critical)
+vercel env add VERCEL_AI_GATEWAY_KEY
+# Enter your Vercel AI Gateway key when prompted
+
+# Then set CDP credentials
 vercel env add CDP_API_KEY_ID
 vercel env add CDP_API_KEY_SECRET
 vercel env add CDP_WALLET_SECRET
-vercel env add VERCEL_AI_GATEWAY_KEY
+
+# Optional (has defaults)
 vercel env add NETWORK  # Optional: defaults to base-sepolia
+
+# VERIFY all variables are set
+vercel env ls
 ```
 
 #### Option B: Vercel Dashboard
 1. Go to your project dashboard
 2. **Project Settings** → **Environment Variables**  
-3. Add each required variable:
+3. **ADD VERCEL_AI_GATEWAY_KEY FIRST** ← Most critical
+4. Add remaining required variables:
    - `CDP_API_KEY_ID`
    - `CDP_API_KEY_SECRET` 
    - `CDP_WALLET_SECRET`
-   - `VERCEL_AI_GATEWAY_KEY`
+
+#### ✅ Verification Step (CRITICAL)
+```bash
+# Confirm all 4 required variables are set before proceeding
+vercel env ls | grep -E "(CDP_API_KEY_ID|CDP_API_KEY_SECRET|CDP_WALLET_SECRET|VERCEL_AI_GATEWAY_KEY)"
+# Should show all 4 variables
+```
 
 ### Step 3: Pre-Deployment Validation
 ```bash
@@ -90,6 +140,78 @@ vercel --prod
 2. Set it in Vercel: `vercel env add VERCEL_AI_GATEWAY_KEY`
 3. Redeploy: `vercel --prod`
 
+### Critical Runtime Error: MIDDLEWARE_INVOCATION_FAILED
+
+**Error (Vercel Error Code):**
+```
+500: INTERNAL_SERVER_ERROR
+Code: MIDDLEWARE_INVOCATION_FAILED
+ID: sfo1::cwx9m-1758034017861-9fd48c29eb5f
+```
+
+**Root Cause**: Middleware attempting synchronous initialization of async resources (CDP accounts, external APIs)
+
+**Symptoms**:
+- ✅ Build completes successfully  
+- ✅ Environment variables are set correctly
+- ❌ All requests return 500 errors
+- ❌ Middleware fails during initialization
+
+**Immediate Solution**:
+1. **Verify the fix is applied** - Check that middleware uses lazy initialization:
+   ```bash
+   # Check for problematic top-level await in middleware
+   grep -n "await.*getOrCreateSellerAccount" src/middleware.ts
+   # Should return NO results (if fixed)
+   ```
+
+2. **Test locally first**:
+   ```bash
+   npm run dev
+   curl http://localhost:3000        # Should return 200
+   curl http://localhost:3000/api/chat # Should return 405 (expected)
+   ```
+
+3. **Deploy the fix**:
+   ```bash
+   git add src/middleware.ts
+   git commit -m "fix: resolve middleware async initialization"
+   git push origin main
+   ```
+
+**Prevention**:
+- ❌ **Never use top-level `await`** in middleware files
+- ✅ **Initialize async resources** inside middleware functions  
+- ✅ **Implement caching** to avoid repeated initialization
+- ✅ **Add error recovery** to prevent complete site failure
+
+**Technical Details**: See `docs/future/middleware-fix-plan.md` for comprehensive analysis
+
+### Debug Middleware Issues
+
+**Check for Middleware Problems**:
+```bash
+# Verify middleware doesn't have top-level async initialization
+grep -n "await.*getOrCreateSellerAccount" src/middleware.ts
+# Should return NO results if properly fixed
+
+# Test middleware locally
+npm run dev
+sleep 5  # Let server start
+curl -v http://localhost:3000/api/chat  # Test API middleware
+curl -v http://localhost:3000/blog      # Test page middleware
+```
+
+**Analyze Vercel Function Logs**:
+```bash
+# View real-time logs during deployment
+vercel logs --follow
+
+# Look for middleware-specific errors
+vercel logs | grep -i middleware
+vercel logs | grep -i "invocation"
+```
+
 ### Debug Environment Issues
 
 ```bash
@@ -105,19 +227,26 @@ npm run build
 
 ## 📋 Environment Variable Reference
 
-### Required (Build fails without these)
-| Variable | Source | Description |
-|----------|--------|-------------|
-| `CDP_API_KEY_ID` | [CDP Portal](https://portal.cdp.coinbase.com) | API key identifier |
-| `CDP_API_KEY_SECRET` | CDP Portal | API key secret |
-| `CDP_WALLET_SECRET` | CDP Portal | Wallet secret key |
-| `VERCEL_AI_GATEWAY_KEY` | Vercel Dashboard → Storage → AI Gateway | AI gateway access key |
+### ⚠️ Required (Build fails without these)
+| Variable | Source | Description | Build Failure Impact |
+|----------|--------|-------------|---------------------|
+| `VERCEL_AI_GATEWAY_KEY` | **[Vercel Dashboard](https://vercel.com/dashboard) → Storage → AI Gateway** | AI gateway access key for OpenAI/Google models | **#1 cause of build failures** |
+| `CDP_API_KEY_ID` | [CDP Portal](https://portal.cdp.coinbase.com) | API key identifier | Build fails during wallet initialization |
+| `CDP_API_KEY_SECRET` | CDP Portal | API key secret | Build fails during wallet initialization |
+| `CDP_WALLET_SECRET` | CDP Portal | Wallet secret key | Build fails during wallet initialization |
 
-### Optional (Have defaults)
+### ✅ Optional (Have defaults)
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `NETWORK` | `base-sepolia` | Blockchain network (`base-sepolia` or `base`) |
 | `URL` | Auto-generated | Application URL (Vercel auto-generates) |
+
+### 🔑 How to Get Vercel AI Gateway Key
+1. Login to [Vercel Dashboard](https://vercel.com/dashboard)
+2. Click **Storage** in the sidebar
+3. Click **AI Gateway** 
+4. Generate or copy your API key
+5. **CRITICAL**: Add it to your Vercel project's environment variables
 
 ## 🛠 Development vs Production
 
@@ -223,3 +352,37 @@ vercel --prod                          # ← Immediate redeploy
 ```
 
 **Root Cause**: Missing `VERCEL_AI_GATEWAY_KEY` - this is the #1 deployment failure cause.
+
+## 🎯 Specific Fix for Your Error
+
+**Your exact error:**
+```
+❌ Invalid environment variables: [
+  {
+    code: 'invalid_type',
+    expected: 'string',
+    received: 'undefined',
+    path: [ 'VERCEL_AI_GATEWAY_KEY' ],
+    message: 'Required'
+  }
+]
+```
+
+**Immediate solution:**
+```bash
+# 1. Get your Vercel AI Gateway key
+# Go to: https://vercel.com/dashboard → Storage → AI Gateway
+
+# 2. Set the environment variable in Vercel
+vercel env add VERCEL_AI_GATEWAY_KEY
+# Paste your key when prompted
+
+# 3. Verify it's set
+vercel env ls | grep VERCEL_AI_GATEWAY_KEY
+# Should show: VERCEL_AI_GATEWAY_KEY (Production)
+
+# 4. Redeploy
+vercel --prod
+```
+
+**Why this happens:** The environment variable is set in your local `.env.local` file but not in Vercel's deployment environment. Vercel builds run in a separate environment that only has access to variables explicitly added to the project.

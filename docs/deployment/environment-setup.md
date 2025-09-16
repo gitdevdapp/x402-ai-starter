@@ -19,8 +19,10 @@ CDP_API_KEY_SECRET=your-api-key-secret-here
 CDP_WALLET_SECRET=your-wallet-secret-here
 
 # ==============================================================================
-# REQUIRED: Vercel AI Gateway (MOST COMMONLY MISSED!)
+# REQUIRED: Vercel AI Gateway (#1 CAUSE OF BUILD FAILURES!)
 # ==============================================================================
+# Get from: https://vercel.com/dashboard → Storage → AI Gateway
+# MUST be set in Vercel environment variables, not just locally!
 VERCEL_AI_GATEWAY_KEY=your-vercel-ai-gateway-key-here
 
 # ==============================================================================
@@ -258,7 +260,7 @@ cdp.evm.createAccount().then(acc =>
    - Set NETWORK to "base-sepolia" or "base"
    - Check for typos in network name
 
-4. **AI Gateway Issues** (MOST COMMON)
+4. **AI Gateway Issues** (#1 CAUSE OF BUILD FAILURES)
    ```
    ❌ Invalid environment variables: [
      {
@@ -270,10 +272,15 @@ cdp.evm.createAccount().then(acc =>
      }
    ]
    ```
+   **This is the exact error you're getting!**
+   
    **Solutions:**
-   - Set `VERCEL_AI_GATEWAY_KEY` in Vercel environment variables
-   - Get the key from Vercel dashboard → Storage → AI Gateway
-   - This is REQUIRED - cannot be disabled or made optional
+   1. Get key from [Vercel Dashboard](https://vercel.com/dashboard) → Storage → AI Gateway
+   2. Set in Vercel: `vercel env add VERCEL_AI_GATEWAY_KEY`
+   3. Verify: `vercel env ls | grep VERCEL_AI_GATEWAY_KEY`
+   4. Redeploy: `vercel --prod`
+   
+   **Why this fails:** Environment variable exists locally but not in Vercel's deployment environment. This is REQUIRED for AI features (OpenAI GPT-4o, Google Gemini) - cannot be disabled or made optional.
 
 ### Debug Environment
 ```bash
