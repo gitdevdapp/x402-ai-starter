@@ -41,11 +41,20 @@ pnpm install
 
 1. Sign into the [Coinbase CDP portal](https://portal.cdp.coinbase.com)
 
-2. Following `.env.example`, set the following environment variables in `.env.local`:
+2. Create `.env.local` with the required environment variables:
 
-- `CDP_API_KEY_ID`
-- `CDP_API_KEY_SECRET`
-- `CDP_WALLET_SECRET`
+```bash
+# Required CDP credentials
+CDP_API_KEY_ID=your-api-key-id
+CDP_API_KEY_SECRET=your-api-key-secret
+CDP_WALLET_SECRET=your-wallet-secret
+
+# Required for AI features
+VERCEL_AI_GATEWAY_KEY=your-vercel-ai-key
+
+# Optional (defaults to base-sepolia)
+NETWORK=base-sepolia
+```
 
 Using AI Gateway requires either a Vercel OIDC token, or an API Key.
 To get an OIDC token, simply run `vc link` then `vc env pull`. An API can be obtained from the [AI Gateway dashboard](https://vercel.com/ai-gateway).
@@ -72,11 +81,18 @@ When you're ready to deploy your SaaS application to production, follow these st
 
 ### Add environment variables
 
-In your Vercel project settings (or during deployment), add all the necessary environment variables. Make sure to update the values for the production environment, including:
+In your Vercel project settings (or during deployment), add all the necessary environment variables. Make sure to update the values for the production environment:
 
-- `CDP_API_KEY_ID`
-- `CDP_API_KEY_SECRET`
-- `CDP_WALLET_SECRET`
+```bash
+# Set via Vercel CLI:
+vercel env add CDP_API_KEY_ID
+vercel env add CDP_API_KEY_SECRET  
+vercel env add CDP_WALLET_SECRET
+vercel env add VERCEL_AI_GATEWAY_KEY  # ← CRITICAL: Often forgotten!
+
+# Or set via Vercel Dashboard:
+# Project Settings → Environment Variables → Add each variable
+```
 
 ## Moving to mainnet
 

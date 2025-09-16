@@ -6,6 +6,30 @@ Detailed environment configuration for x402 deployment.
 
 ⚠️ **CRITICAL**: All variables marked as "Required" MUST be set before deployment or the build will fail.
 
+## 🚀 Quick Setup Template
+
+Create a `.env.local` file in your project root:
+
+```bash
+# ==============================================================================
+# REQUIRED: Coinbase Developer Platform (CDP) Credentials
+# ==============================================================================
+CDP_API_KEY_ID=your-api-key-id-here
+CDP_API_KEY_SECRET=your-api-key-secret-here  
+CDP_WALLET_SECRET=your-wallet-secret-here
+
+# ==============================================================================
+# REQUIRED: Vercel AI Gateway (MOST COMMONLY MISSED!)
+# ==============================================================================
+VERCEL_AI_GATEWAY_KEY=your-vercel-ai-gateway-key-here
+
+# ==============================================================================
+# OPTIONAL: Configuration (has defaults)
+# ==============================================================================
+NETWORK=base-sepolia
+# URL=http://localhost:3000  # Auto-generated in production
+```
+
 ### Required Variables (Build will fail without these)
 
 ```bash
