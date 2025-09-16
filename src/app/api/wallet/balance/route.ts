@@ -37,51 +37,16 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get the account first, then get balances
-    // Note: CDP requires getting the account to check balances
-    // For external addresses, we'll use a simpler approach
-    let balances;
-    try {
-      // Try to get account by address (this may not work for external addresses)
-      const accounts = await cdp.evm.listAccounts();
-      const accountsArray = Array.isArray(accounts) ? accounts : accounts.accounts || [];
-      
-      const account = accountsArray.find(acc => acc.address.toLowerCase() === validation.data.address.toLowerCase());
-      
-      if (account) {
-        // If we found the account, get its balances
-        balances = await account.listTokenBalances({
-          network: env.NETWORK,
-        });
-      } else {
-        // If account not found in our list, return zero balances
-        balances = { balances: [] };
-      }
-    } catch (error) {
-      console.error("Error fetching account balances:", error);
-      // Fallback to zero balances
-      balances = { balances: [] };
-    }
+    console.log("Fetching balances for:", validation.data.address);
 
-    // Extract USDC and ETH balances with null safety
-    const usdcBalance = balances?.balances?.find(
-      (balance) => balance?.token?.symbol === "USDC"
-    );
-    
-    const ethBalance = balances?.balances?.find(
-      (balance) => balance?.token?.symbol === "ETH"
-    );
+    // Primary: Direct blockchain balance check (most reliable)
+    let usdcAmount = 0;
+    let ethAmount = 0;
+    let balanceSource = 'blockchain';
 
-    // Get CDP USDC amount
-    const cdpUsdcAmount = usdcBalance?.amount ? Number(usdcBalance.amount) / 1000000 : 0;
-    const ethAmount = ethBalance?.amount ? Number(ethBalance.amount) / 1000000000000000000 : 0;
-
-    // Fallback: Direct contract balance check for USDC
-    let contractUsdcAmount = 0;
-    let balanceSource = 'cdp';
-    
-    try {
-      if (env.NETWORK === "base-sepolia") {
+    if (env.NETWORK === "base-sepolia") {
+      try {
+        // Get USDC balance from contract
         const contractBalance = await publicClient.readContract({
           address: USDC_CONTRACT_ADDRESS as `0x${string}`,
           abi: USDC_ABI,
@@ -89,30 +54,35 @@ export async function GET(request: NextRequest) {
           args: [validation.data.address as `0x${string}`]
         });
         
-        contractUsdcAmount = Number(contractBalance) / 1000000; // USDC has 6 decimals
-        
-        // Use whichever method returns a higher balance (more accurate)
-        if (contractUsdcAmount > cdpUsdcAmount) {
-          balanceSource = 'contract';
-        }
+        usdcAmount = Number(contractBalance) / 1000000; // USDC has 6 decimals
+        console.log("USDC balance:", usdcAmount);
+      } catch (usdcError) {
+        console.error("USDC balance fetch failed:", usdcError);
       }
-    } catch (contractError) {
-      console.warn("Direct contract balance check failed:", contractError);
-      // Continue with CDP balance
+
+      try {
+        // Get ETH balance directly from blockchain
+        const ethBalanceWei = await publicClient.getBalance({
+          address: validation.data.address as `0x${string}`
+        });
+        
+        ethAmount = Number(ethBalanceWei) / 1000000000000000000; // Convert wei to ETH
+        console.log("ETH balance (wei):", ethBalanceWei.toString());
+        console.log("ETH balance (ETH):", ethAmount);
+      } catch (ethError) {
+        console.error("ETH balance fetch failed:", ethError);
+      }
     }
 
-    // Use the higher of the two USDC balance readings
-    const finalUsdcAmount = Math.max(cdpUsdcAmount, contractUsdcAmount);
-
     return NextResponse.json({
-      usdc: isNaN(finalUsdcAmount) ? 0 : finalUsdcAmount,
-      eth: isNaN(ethAmount) ? 0 : ethAmount, // Convert from wei to ETH
+      usdc: isNaN(usdcAmount) ? 0 : usdcAmount,
+      eth: isNaN(ethAmount) ? 0 : ethAmount,
       lastUpdated: new Date().toISOString(),
       address: validation.data.address,
-      balanceSource, // Indicate which method was used
+      balanceSource,
       debug: {
-        cdpUsdc: cdpUsdcAmount,
-        contractUsdc: contractUsdcAmount,
+        usdcAmount,
+        ethAmount,
         network: env.NETWORK
       }
     });

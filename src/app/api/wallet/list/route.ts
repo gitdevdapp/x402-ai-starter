@@ -1,8 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { CdpClient } from "@coinbase/cdp-sdk";
 import { env } from "@/lib/env";
+import { createPublicClient, http } from "viem";
+import { chain } from "@/lib/accounts";
 
 const cdp = new CdpClient();
+
+// USDC contract details for Base Sepolia
+const USDC_CONTRACT_ADDRESS = "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238";
+const USDC_ABI = [
+  "function balanceOf(address owner) view returns (uint256)",
+  "function decimals() view returns (uint8)"
+] as const;
+
+const publicClient = createPublicClient({
+  chain,
+  transport: http(),
+});
 
 export async function GET(request: NextRequest) {
   try {
@@ -23,25 +37,41 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Get balances for each account
+    // Get balances for each account using direct blockchain queries
     const walletsWithBalances = await Promise.all(
       accounts.map(async (account) => {
         try {
-          const balances = await account.listTokenBalances({
-            network: env.NETWORK,
-          });
+          console.log(`Fetching balances for ${account.name} (${account.address})`);
 
-          const usdcBalance = balances?.balances?.find(
-            (balance) => balance?.token?.symbol === "USDC"
-          );
-          
-          const ethBalance = balances?.balances?.find(
-            (balance) => balance?.token?.symbol === "ETH"
-          );
+          let usdcAmount = 0;
+          let ethAmount = 0;
 
-          // Ensure we always return valid numbers
-          const usdcAmount = usdcBalance?.amount ? Number(usdcBalance.amount) / 1000000 : 0;
-          const ethAmount = ethBalance?.amount ? Number(ethBalance.amount) / 1000000000000000000 : 0;
+          if (env.NETWORK === "base-sepolia") {
+            try {
+              // Get USDC balance from contract
+              const contractBalance = await publicClient.readContract({
+                address: USDC_CONTRACT_ADDRESS as `0x${string}`,
+                abi: USDC_ABI,
+                functionName: 'balanceOf',
+                args: [account.address as `0x${string}`]
+              });
+              
+              usdcAmount = Number(contractBalance) / 1000000; // USDC has 6 decimals
+            } catch (usdcError) {
+              console.warn(`USDC balance fetch failed for ${account.address}:`, usdcError);
+            }
+
+            try {
+              // Get ETH balance directly from blockchain
+              const ethBalanceWei = await publicClient.getBalance({
+                address: account.address as `0x${string}`
+              });
+              
+              ethAmount = Number(ethBalanceWei) / 1000000000000000000; // Convert wei to ETH
+            } catch (ethError) {
+              console.warn(`ETH balance fetch failed for ${account.address}:`, ethError);
+            }
+          }
 
           return {
             name: account.name || "Unnamed Wallet",

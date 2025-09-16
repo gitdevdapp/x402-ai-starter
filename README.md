@@ -1,24 +1,43 @@
-# x402 Next.js + AI Starter Kit
+# x402 AI Payment Platform
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fvercel-labs%2Fx402-ai-starter&env=CDP_API_KEY_ID,CDP_API_KEY_SECRET,CDP_WALLET_SECRET&envDescription=Coinbase%20Developer%20Platform%20credentials%20are%20needed%20to%20create%20and%20fund%20server%20wallets&envLink=https%3A%2F%2Fdocs.cdp.coinbase.com%2Fapi-reference%2Fv2%2Fauthentication&project-name=x402-ai-starter&repository-name=x402-ai-starter&demo-title=x402%20AI%20Starter&demo-description=A%20fullstack%20template%20for%20using%20x402%20with%20MCP%20and%20AI%20SDK&demo-url=https%3A%2F%2Fx402-ai-starter.labs.vercel.dev%2F&demo-image=https%3A%2F%2Fx402-ai-starter.labs.vercel.dev%2Fscreenshot.png)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fvercel-labs%2Fx402-ai-starter&env=CDP_API_KEY_ID,CDP_API_KEY_SECRET,CDP_WALLET_SECRET,VERCEL_AI_GATEWAY_KEY&envDescription=Coinbase%20Developer%20Platform%20credentials%20are%20needed%20to%20create%20and%20fund%20server%20wallets&envLink=https%3A%2F%2Fdocs.cdp.coinbase.com%2Fapi-reference%2Fv2%2Fauthentication&project-name=x402-ai-starter&repository-name=x402-ai-starter&demo-title=x402%20AI%20Payment%20Platform&demo-description=A%20comprehensive%20blockchain%20payment%20platform%20with%20AI%20chat%20and%20USDC%20transfers&demo-url=https%3A%2F%2Fx402-ai-starter.labs.vercel.dev%2F&demo-image=https%3A%2F%2Fx402-ai-starter.labs.vercel.dev%2Fscreenshot.png)
 
 ![Screenshot of the app](./public/screenshot-small.png)
 
-[x402](https://x402.org) is a new protocol built on top of HTTP for doing fully accountless payments easily, quickly, cheaply and securely.
+A **production-ready blockchain payment platform** combining AI chat capabilities with complete USDC wallet management. Built on [x402](https://x402.org) protocol for accountless payments, featuring real-time balance detection, automated funding, and secure wallet-to-wallet transfers.
 
-This template built with [Next.js](https://nextjs.org), [AI SDK](https://ai-sdk.dev), [AI Elements](https://ai-elements.dev), and [AI Gateway](https://vercel.com/ai-gateway) and the [Coinbase CDP](https://docs.cdp.coinbase.com/) shows off using x402 with a modern AI stack.
+**🚀 Status**: ✅ **PRODUCTION READY** - USDC Balance Issues Resolved, Full Transfer Functionality, Comprehensive Documentation
 
 **Demo: [https://x402-ai-starter.vercel.app/](https://x402-ai-starter.vercel.app/)**
 
-## Features
+## ✨ Key Features
 
-- AI Chat + API playground to see x402 in action
-- AI agent that can pay for tools
-- Remote MCP server with "paid" tools
-- Paywalled APIs
-- Paywalled pages (for bots)
-- Secure server managed wallets
-- Test commit verification - repository synced successfully ✅
+### 🤖 AI Integration
+- **AI Chat Interface** with GPT-4o and Gemini 2.0 Flash Lite support
+- **AI SDK v5** with OpenAI and Google providers
+- **AI Gateway** integration for optimized AI requests
+- **AI Elements** for enhanced chat experience
+
+### 💰 Complete Payment System
+- **USDC Wallet Management** - Create, fund, and manage wallets
+- **Real-time Balance Detection** - Dual-source reading (CDP + direct contract)
+- **Automated Funding** - Auto-request USDC when balance < $0.50
+- **Wallet-to-Wallet Transfers** - Send USDC between accounts
+- **Transaction Tracking** - Real-time updates with explorer links
+
+### 🔐 Security & Infrastructure
+- **x402 Protocol** - Accountless payments via HTTP
+- **Coinbase CDP Integration** - Enterprise-grade wallet security
+- **Server-managed Wallets** - Secure key management
+- **Base Sepolia Testnet** - Production-ready test environment
+- **Archive System** - Smart wallet organization and cleanup
+
+### 🛠️ Developer Experience
+- **Comprehensive Documentation** - Organized docs structure
+- **Automated Testing** - End-to-end wallet flow verification
+- **Production Deployment** - Vercel-optimized with middleware fixes
+- **TypeScript** - Full type safety throughout
+- **Modern Stack** - Next.js 15, React, Tailwind CSS
 
 ## Tech Stack
 
@@ -29,73 +48,115 @@ This template built with [Next.js](https://nextjs.org), [AI SDK](https://ai-sdk.
 - [Coinbase CDP](https://docs.cdp.coinbase.com/)
 - [x402](https://x402.org)
 
-## Getting Started
+## 🚀 Quick Start
 
+### Option 1: Quick Setup (Recommended)
+See our **[Quickstart Guide](./docs/current/quickstart-guide.md)** for the fastest way to get running.
+
+### Option 2: Manual Setup
 ```bash
 git clone https://github.com/vercel-labs/x402-ai-starter
 cd x402-ai-starter
 pnpm install
 ```
 
-## Running Locally
+## 🖥️ Local Development
 
-1. Sign into the [Coinbase CDP portal](https://portal.cdp.coinbase.com)
+1. **Get CDP Credentials**
+   - Sign into the [Coinbase CDP portal](https://portal.cdp.coinbase.com)
+   - Create API keys and wallet secret (see **[Environment Setup](./docs/deployment/environment-setup.md)**)
 
-2. Create `.env.local` with the required environment variables:
+2. **Setup Environment**
+   ```bash
+   # Create .env.local with required variables
+   CDP_API_KEY_ID=your-api-key-id
+   CDP_API_KEY_SECRET=your-api-key-secret
+   CDP_WALLET_SECRET=your-wallet-secret
+   VERCEL_AI_GATEWAY_KEY=your-vercel-ai-key  # Required for AI features
+   NETWORK=base-sepolia  # Optional, defaults to base-sepolia
+   ```
 
+   > 💡 **AI Gateway**: Get your key from [Vercel AI Gateway dashboard](https://vercel.com/ai-gateway) or use `vc link && vc env pull` for OIDC token
+
+3. **Start Development Server**
+   ```bash
+   pnpm dev
+   ```
+
+4. **Open Browser**
+   - Visit [http://localhost:3000](http://localhost:3000)
+   - Create a wallet and test the full payment flow
+
+## 🧪 Testing & Verification
+
+### Testnet Environment
+- **Network**: Base Sepolia (testnet with fake USDC)
+- **Auto-funding**: Automatically requests USDC when balance < $0.50
+- **Manual funding**: [CDP Faucet](https://portal.cdp.coinbase.com/products/faucet?token=USDC&network=base-sepolia)
+
+### Automated Testing
+Visit **`/test/wallet-flow`** for comprehensive end-to-end testing:
+- ✅ Wallet creation and initial balance verification
+- ✅ USDC funding with real-time balance updates
+- ✅ ETH funding verification
+- ✅ Transaction tracking with explorer links
+- ✅ Archive system functionality
+
+### Manual Testing Steps
+1. **Create Wallet** → Verify initial zero balances
+2. **Fund with USDC** → Watch real-time progress indicators
+3. **Fund with ETH** → Test dual balance detection
+4. **Transfer USDC** → Send between wallets
+5. **Check History** → View transaction records
+
+## 🚀 Production Deployment
+
+### Quick Deploy
+Use the **"Deploy with Vercel"** button above or follow our **[Deployment Guide](./docs/deployment/CANONICAL_DEPLOYMENT_GUIDE.md)**.
+
+### Environment Variables
+Set these in your Vercel project settings:
 ```bash
-# Required CDP credentials
-CDP_API_KEY_ID=your-api-key-id
-CDP_API_KEY_SECRET=your-api-key-secret
-CDP_WALLET_SECRET=your-wallet-secret
-
-# Required for AI features
-VERCEL_AI_GATEWAY_KEY=your-vercel-ai-key
-
-# Optional (defaults to base-sepolia)
-NETWORK=base-sepolia
+CDP_API_KEY_ID=your-production-api-key-id
+CDP_API_KEY_SECRET=your-production-api-key-secret
+CDP_WALLET_SECRET=your-production-wallet-secret
+VERCEL_AI_GATEWAY_KEY=your-vercel-ai-gateway-key
+NETWORK=base  # Production network
 ```
 
-Using AI Gateway requires either a Vercel OIDC token, or an API Key.
-To get an OIDC token, simply run `vc link` then `vc env pull`. An API can be obtained from the [AI Gateway dashboard](https://vercel.com/ai-gateway).
+> ⚠️ **Critical**: Don't forget `VERCEL_AI_GATEWAY_KEY` - it's required for AI features!
 
-Using AI Gateway isn't required, you can use any AI SDK model provider and its associated credentials.
+### Mainnet Setup
+1. Change `NETWORK=base` in environment variables
+2. Fund your production wallets with real USDC via [CDP Dashboard](https://portal.cdp.coinbase.com/products/server-wallet?accountType=evm-eoa)
+3. Test thoroughly before going live
 
-3. Run `pnpm dev`
+### Deployment Resources
+- **[Complete Deployment Guide](./docs/deployment/CANONICAL_DEPLOYMENT_GUIDE.md)**
+- **[Environment Setup](./docs/deployment/environment-setup.md)**
+- **[Troubleshooting](./docs/deployment/troubleshooting.md)**
+- **[Vercel Fixes](./docs/deployment/vercel-deployment-fix.md)**
 
-4. Open [http://localhost:3000](http://localhost:3000) in your browser to see the app in action.
+## 📚 Documentation
 
-## Testing Payments
+Our documentation is organized for easy navigation:
 
-By default, the app uses the `base-sepolia` network, or "testnet". This is a testing network with fake money. The app is configured to automically request more funds from a faucet (source of testnet money) when your account is running low. You can also do this yourself in the [Coinbase CDP dashboard](https://portal.cdp.coinbase.com/products/faucet?token=USDC&network=base-sepolia).
+### 🎯 **Start Here**
+- **[Project State](./docs/current/PROJECT_STATE.md)** - Complete current capabilities and architecture
+- **[Quickstart Guide](./docs/current/quickstart-guide.md)** - Get up and running fast
 
-## Going to Production
+### 🚀 **Deployment**
+- **[Deployment Guide](./docs/deployment/CANONICAL_DEPLOYMENT_GUIDE.md)** - Complete production deployment
+- **[Environment Setup](./docs/deployment/environment-setup.md)** - Environment configuration
+- **[Troubleshooting](./docs/deployment/troubleshooting.md)** - Common issues and solutions
 
-When you're ready to deploy your SaaS application to production, follow these steps:
+### 🔮 **Future Plans**
+- **[Middleware Optimization](./docs/future/middleware-fix-plan.md)** - Architecture improvements
+- **[Wallet Reliability](./docs/future/wallet-reliability-fix-plan.md)** - Enhancement plans
 
-### Deploy to Vercel
+### 📚 **Archive**
+- **[September 2025](./docs/archive/september-16-2025/)** - Recent fixes and enhancements
+- **[December 2024](./docs/archive/december-3-2024/)** - Historical project state
 
-1. Push your code to a GitHub repository.
-2. Connect your repository to [Vercel](https://vercel.com/) and deploy it.
-3. Follow the Vercel deployment process, which will guide you through setting up your project.
-
-### Add environment variables
-
-In your Vercel project settings (or during deployment), add all the necessary environment variables. Make sure to update the values for the production environment:
-
-```bash
-# Set via Vercel CLI:
-vercel env add CDP_API_KEY_ID
-vercel env add CDP_API_KEY_SECRET  
-vercel env add CDP_WALLET_SECRET
-vercel env add VERCEL_AI_GATEWAY_KEY  # ← CRITICAL: Often forgotten!
-
-# Or set via Vercel Dashboard:
-# Project Settings → Environment Variables → Add each variable
-```
-
-## Moving to mainnet
-
-To move to mainnet, set the `NETWORK` environment variable to `base`.
-
-Make sure that the `Purchaser` account has enough funds to pay for the tools you're using. To fund the account, you can send USDC to the account's address in the [Coinbase CDP dashboard](https://portal.cdp.coinbase.com/products/server-wallet?accountType=evm-eoa).
+### 📖 **Navigation Guide**
+See **[docs/README.md](./docs/README.md)** for a complete overview of our documentation structure.

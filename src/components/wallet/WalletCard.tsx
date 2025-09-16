@@ -124,7 +124,7 @@ export function WalletCard({ wallet, isSelected, onSelect, onRefreshBalance, onA
           </div>
         </div>
 
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2 min-w-fit">
           <Button
             variant="outline"
             size="sm"
@@ -154,16 +154,17 @@ export function WalletCard({ wallet, isSelected, onSelect, onRefreshBalance, onA
 
           {onArchive && (
             <Button
-              variant="ghost"
+              variant="outline"
               size="sm"
               onClick={(e) => {
                 e.stopPropagation();
                 onArchive(wallet.address, wallet.name);
               }}
-              className="p-2 text-gray-500 hover:text-gray-700"
+              className="px-3 py-2 border-orange-200 text-orange-600 hover:bg-orange-50 hover:border-orange-300 hover:text-orange-700 whitespace-nowrap"
               title="Archive Wallet"
             >
-              <Archive className="h-3 w-3" />
+              <Archive className="h-3 w-3 mr-1" />
+              <span className="text-xs font-medium">Archive</span>
             </Button>
           )}
         </div>

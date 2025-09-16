@@ -9,13 +9,16 @@ This documentation has been reorganized for clarity and maintainability. All inf
 
 ### 🎯 Current State
 - **[current/PROJECT_STATE.md](./current/PROJECT_STATE.md)** - **CANONICAL** current project state and capabilities
+- **[current/quickstart-guide.md](./current/quickstart-guide.md)** - Quick setup guide for getting started
 
 ### 🚀 Deployment
 - **[deployment/README.md](./deployment/README.md)** - Quick deployment guide
-- **[deployment/CANONICAL_DEPLOYMENT_GUIDE.md](./deployment/CANONICAL_DEPLOYMENT_GUIDE.md)** - Comprehensive deployment guide  
+- **[deployment/CANONICAL_DEPLOYMENT_GUIDE.md](./deployment/CANONICAL_DEPLOYMENT_GUIDE.md)** - Comprehensive deployment guide
 - **[deployment/environment-setup.md](./deployment/environment-setup.md)** - Environment configuration
 - **[deployment/troubleshooting.md](./deployment/troubleshooting.md)** - Common issues and solutions
-- **[deployment/vercel-deployment-fix-plan.md](./deployment/vercel-deployment-fix-plan.md)** - Vercel-specific fixes
+- **[deployment/vercel-deployment-fix.md](./deployment/vercel-deployment-fix.md)** - Recent Vercel AI Gateway fix
+- **[deployment/vercel-deployment-fix-plan.md](./deployment/vercel-deployment-fix-plan.md)** - Legacy Vercel client-side exception fix
+- **[deployment/middleware-migration-guide.md](./deployment/middleware-migration-guide.md)** - Middleware size optimization guide
 
 ### 🔮 Future Plans
 - **[future/middleware-fix-plan.md](./future/middleware-fix-plan.md)** - Middleware architecture improvements
@@ -23,7 +26,7 @@ This documentation has been reorganized for clarity and maintainability. All inf
 
 ### 📚 Archive
 - **[archive/december-3-2024/](./archive/december-3-2024/)** - December 2024 project state
-- **[archive/september-16-2025/](./archive/september-16-2025/)** - September 2025 project state  
+- **[archive/september-16-2025/](./archive/september-16-2025/)** - September 2025 project state (includes USDC fix, wallet enhancements, documentation consolidation)
 - **[archive/original-current/](./archive/original-current/)** - Original current documentation
 - **[archive/original-future/](./archive/original-future/)** - Original future plans
 
