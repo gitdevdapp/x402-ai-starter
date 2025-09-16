@@ -2,8 +2,22 @@ import { NextRequest, NextResponse } from "next/server";
 import { CdpClient } from "@coinbase/cdp-sdk";
 import { env } from "@/lib/env";
 import { z } from "zod";
+import { createPublicClient, http } from "viem";
+import { chain } from "@/lib/accounts";
 
 const cdp = new CdpClient();
+
+// USDC contract details for Base Sepolia
+const USDC_CONTRACT_ADDRESS = "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238";
+const USDC_ABI = [
+  "function balanceOf(address owner) view returns (uint256)",
+  "function decimals() view returns (uint8)"
+] as const;
+
+const publicClient = createPublicClient({
+  chain,
+  transport: http(),
+});
 
 const balanceQuerySchema = z.object({
   address: z.string().regex(/^0x[a-fA-F0-9]{40}$/, "Invalid Ethereum address format")
@@ -58,15 +72,49 @@ export async function GET(request: NextRequest) {
       (balance) => balance?.token?.symbol === "ETH"
     );
 
-    // Ensure we always return valid numbers
-    const usdcAmount = usdcBalance?.amount ? Number(usdcBalance.amount) / 1000000 : 0;
+    // Get CDP USDC amount
+    const cdpUsdcAmount = usdcBalance?.amount ? Number(usdcBalance.amount) / 1000000 : 0;
     const ethAmount = ethBalance?.amount ? Number(ethBalance.amount) / 1000000000000000000 : 0;
 
+    // Fallback: Direct contract balance check for USDC
+    let contractUsdcAmount = 0;
+    let balanceSource = 'cdp';
+    
+    try {
+      if (env.NETWORK === "base-sepolia") {
+        const contractBalance = await publicClient.readContract({
+          address: USDC_CONTRACT_ADDRESS as `0x${string}`,
+          abi: USDC_ABI,
+          functionName: 'balanceOf',
+          args: [validation.data.address as `0x${string}`]
+        });
+        
+        contractUsdcAmount = Number(contractBalance) / 1000000; // USDC has 6 decimals
+        
+        // Use whichever method returns a higher balance (more accurate)
+        if (contractUsdcAmount > cdpUsdcAmount) {
+          balanceSource = 'contract';
+        }
+      }
+    } catch (contractError) {
+      console.warn("Direct contract balance check failed:", contractError);
+      // Continue with CDP balance
+    }
+
+    // Use the higher of the two USDC balance readings
+    const finalUsdcAmount = Math.max(cdpUsdcAmount, contractUsdcAmount);
+
     return NextResponse.json({
-      usdc: isNaN(usdcAmount) ? 0 : usdcAmount, // Convert from µUSDC to USDC
+      usdc: isNaN(finalUsdcAmount) ? 0 : finalUsdcAmount,
       eth: isNaN(ethAmount) ? 0 : ethAmount, // Convert from wei to ETH
       lastUpdated: new Date().toISOString(),
-      address: validation.data.address
+      address: validation.data.address,
+      balanceSource, // Indicate which method was used
+      debug: {
+        cdpUsdc: cdpUsdcAmount,
+        contractUsdc: contractUsdcAmount,
+        network: env.NETWORK
+      }
     });
 
   } catch (error) {

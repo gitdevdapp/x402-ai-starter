@@ -5,7 +5,17 @@ import { Button } from "@/components/ui/button";
 import { CreateWalletForm } from "./CreateWalletForm";
 import { WalletCard } from "./WalletCard";
 import { FundingPanel } from "./FundingPanel";
+import { USDCTransferPanel } from "./USDCTransferPanel";
 import { Loader } from "@/components/ai-elements/loader";
+import { 
+  filterActiveWallets, 
+  archiveWallet, 
+  autoArchiveOldWallets, 
+  enforceMaxActiveWallets,
+  getArchiveStats
+} from "@/lib/wallet-archive";
+import { Archive, Settings } from "lucide-react";
+import Link from "next/link";
 
 interface Wallet {
   name: string;
@@ -26,11 +36,14 @@ interface WalletListResponse {
 
 export function WalletManager() {
   const [wallets, setWallets] = useState<Wallet[]>([]);
+  const [activeWallets, setActiveWallets] = useState<Wallet[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedWallet, setSelectedWallet] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'fund' | 'transfer'>('fund');
+  const [archiveStats, setArchiveStats] = useState({ totalArchived: 0, archivedThisWeek: 0, archivedThisMonth: 0 });
 
   // Load wallets on component mount
   useEffect(() => {
@@ -49,6 +62,19 @@ export function WalletManager() {
       
       const data: WalletListResponse = await response.json();
       setWallets(data.wallets);
+      
+      // Apply auto-archiving rules
+      autoArchiveOldWallets(data.wallets);
+      enforceMaxActiveWallets(data.wallets);
+      
+      // Filter out archived wallets for main display
+      const active = filterActiveWallets(data.wallets);
+      setActiveWallets(active);
+      
+      // Load archive statistics
+      const stats = getArchiveStats();
+      setArchiveStats(stats);
+      
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load wallets");
     } finally {
@@ -98,24 +124,38 @@ export function WalletManager() {
       
       const balanceData = await response.json();
       
-      // Update the specific wallet's balance
-      setWallets(prevWallets =>
-        prevWallets.map(wallet =>
-          wallet.address === address
-            ? {
-                ...wallet,
-                balances: {
-                  usdc: balanceData.usdc ?? 0,
-                  eth: balanceData.eth ?? 0,
-                },
-                lastUpdated: balanceData.lastUpdated,
-                error: undefined
-              }
-            : wallet
-        )
-      );
+      // Update the specific wallet's balance in both lists
+      const updateWallet = (wallet: Wallet) => 
+        wallet.address === address
+          ? {
+              ...wallet,
+              balances: {
+                usdc: balanceData.usdc ?? 0,
+                eth: balanceData.eth ?? 0,
+              },
+              lastUpdated: balanceData.lastUpdated,
+              error: undefined
+            }
+          : wallet;
+      
+      setWallets(prevWallets => prevWallets.map(updateWallet));
+      setActiveWallets(prevActive => prevActive.map(updateWallet));
     } catch (err) {
       console.error("Failed to refresh balance:", err);
+    }
+  };
+
+  const handleArchiveWallet = (address: string, name: string) => {
+    archiveWallet(address, name, "Manually archived from wallet manager");
+    
+    // Remove from active wallets and reload stats
+    setActiveWallets(prev => prev.filter(w => w.address !== address));
+    const stats = getArchiveStats();
+    setArchiveStats(stats);
+    
+    // If the archived wallet was selected, clear selection
+    if (selectedWallet === address) {
+      setSelectedWallet(null);
     }
   };
 
@@ -140,7 +180,19 @@ export function WalletManager() {
     <div className="space-y-6">
       <div className="p-6 bg-white rounded-lg border">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold">Wallet Manager</h2>
+          <div className="flex items-center gap-4">
+            <h2 className="text-xl font-semibold">Wallet Manager</h2>
+            {archiveStats.totalArchived > 0 && (
+              <div className="flex items-center gap-2">
+                <Link href="/wallets/archive">
+                  <Button variant="outline" size="sm">
+                    <Archive className="h-4 w-4 mr-2" />
+                    Archive ({archiveStats.totalArchived})
+                  </Button>
+                </Link>
+              </div>
+            )}
+          </div>
           <Button 
             onClick={() => setShowCreateForm(true)}
             disabled={isCreating}
@@ -174,19 +226,35 @@ export function WalletManager() {
         )}
 
         <div className="space-y-4">
-          {wallets.length === 0 ? (
+          {activeWallets.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
-              <p>No wallets found.</p>
-              <p className="text-sm">Create your first wallet to get started!</p>
+              {wallets.length === 0 ? (
+                <>
+                  <p>No wallets found.</p>
+                  <p className="text-sm">Create your first wallet to get started!</p>
+                </>
+              ) : (
+                <>
+                  <p>No active wallets.</p>
+                  <p className="text-sm">All wallets have been archived.</p>
+                  <Link href="/wallets/archive">
+                    <Button variant="outline" className="mt-2">
+                      <Archive className="h-4 w-4 mr-2" />
+                      View Archived Wallets
+                    </Button>
+                  </Link>
+                </>
+              )}
             </div>
           ) : (
-            wallets.map((wallet) => (
+            activeWallets.map((wallet) => (
               <WalletCard
                 key={wallet.address}
                 wallet={wallet}
                 isSelected={selectedWallet === wallet.address}
                 onSelect={() => setSelectedWallet(wallet.address)}
                 onRefreshBalance={handleRefreshBalance}
+                onArchive={handleArchiveWallet}
               />
             ))
           )}
@@ -194,10 +262,51 @@ export function WalletManager() {
       </div>
 
       {selectedWallet && (
-        <FundingPanel
-          walletAddress={selectedWallet}
-          onFunded={handleWalletFunded}
-        />
+        <div className="space-y-4">
+          {/* Tab Navigation */}
+          <div className="bg-white rounded-lg border">
+            <div className="flex border-b">
+              <button
+                onClick={() => setActiveTab('fund')}
+                className={`px-6 py-3 text-sm font-medium transition-colors ${
+                  activeTab === 'fund'
+                    ? 'border-b-2 border-blue-500 text-blue-600 bg-blue-50'
+                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                Fund Wallet
+              </button>
+              <button
+                onClick={() => setActiveTab('transfer')}
+                className={`px-6 py-3 text-sm font-medium transition-colors ${
+                  activeTab === 'transfer'
+                    ? 'border-b-2 border-blue-500 text-blue-600 bg-blue-50'
+                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                Send USDC
+              </button>
+            </div>
+          </div>
+
+          {/* Tab Content */}
+          {activeTab === 'fund' && (
+            <FundingPanel
+              walletAddress={selectedWallet}
+              onFunded={handleWalletFunded}
+            />
+          )}
+          
+          {activeTab === 'transfer' && (
+            <USDCTransferPanel
+              fromWallet={selectedWallet}
+              availableBalance={
+                wallets.find(w => w.address === selectedWallet)?.balances?.usdc || 0
+              }
+              onTransferComplete={handleWalletFunded}
+            />
+          )}
+        </div>
       )}
     </div>
   );

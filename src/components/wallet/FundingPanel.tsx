@@ -26,12 +26,59 @@ export function FundingPanel({ walletAddress, onFunded }: FundingPanelProps) {
   const [recentTransactions, setRecentTransactions] = useState<FundingTransaction[]>([]);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [lastTransaction, setLastTransaction] = useState<FundingTransaction | null>(null);
+  const [loadingMessage, setLoadingMessage] = useState<string | null>(null);
+  const [warningMessage, setWarningMessage] = useState<string | null>(null);
+
+  const pollBalanceUpdate = async (expectedAmount: number): Promise<boolean> => {
+    const maxAttempts = 12; // 60 seconds total
+    let attempts = 0;
+    
+    const poll = async (): Promise<boolean> => {
+      attempts++;
+      setLoadingMessage(`⏳ Checking for balance update... (${attempts}/${maxAttempts})`);
+      
+      try {
+        const response = await fetch(`/api/wallet/balance?address=${walletAddress}`);
+        const data = await response.json();
+        
+        if (data.usdc >= expectedAmount) {
+          setLoadingMessage(null);
+          setSuccessMessage(`✅ Balance updated! Received ${data.usdc.toFixed(4)} USDC`);
+          onFunded();
+          return true;
+        }
+        
+        if (attempts < maxAttempts) {
+          setTimeout(() => poll(), 5000); // Check every 5 seconds
+          return false;
+        } else {
+          setLoadingMessage(null);
+          setWarningMessage(`⚠️ Transaction successful but balance not updated yet. This can take up to 5 minutes on testnet.`);
+          return false;
+        }
+      } catch (error) {
+        console.warn("Balance polling failed:", error);
+        if (attempts < maxAttempts) {
+          setTimeout(() => poll(), 5000);
+          return false;
+        } else {
+          setLoadingMessage(null);
+          setWarningMessage(`⚠️ Could not verify balance update. Please refresh manually.`);
+          return false;
+        }
+      }
+    };
+    
+    return poll();
+  };
 
   const handleFundWallet = async () => {
     try {
       setIsLoading(true);
       setError(null);
       setSuccessMessage(null);
+      setLoadingMessage("🔄 Requesting funds from faucet...");
+      setWarningMessage(null);
 
       const response = await fetch("/api/wallet/fund", {
         method: "POST",
@@ -53,6 +100,7 @@ export function FundingPanel({ walletAddress, onFunded }: FundingPanelProps) {
       
       // Determine amount based on token type
       const amount = selectedToken === "usdc" ? "1.0 USDC" : "0.001 ETH";
+      const expectedBalance = selectedToken === "usdc" ? 1.0 : 0.001;
       
       // Add transaction to recent transactions
       const newTransaction: FundingTransaction = {
@@ -67,14 +115,14 @@ export function FundingPanel({ walletAddress, onFunded }: FundingPanelProps) {
       setRecentTransactions(prev => [newTransaction, ...prev.slice(0, 4)]);
       setLastTransaction(newTransaction);
       
-      // Set success message
+      // Set initial success message
       if (result.status === "success") {
-        setSuccessMessage(`Successfully funded wallet with ${amount}! Transaction confirmed on blockchain.`);
+        setLoadingMessage("✅ Transaction confirmed! Checking balance update...");
         
-        // Auto-refresh balance after 3 seconds
+        // Start polling for balance update
         setTimeout(() => {
-          onFunded();
-        }, 3000);
+          pollBalanceUpdate(expectedBalance);
+        }, 2000); // Wait 2 seconds before starting to poll
       }
       
     } catch (err) {
@@ -151,6 +199,32 @@ export function FundingPanel({ walletAddress, onFunded }: FundingPanelProps) {
           </div>
         )}
 
+        {loadingMessage && (
+          <div className="p-4 bg-blue-50 border border-blue-200 rounded-md text-blue-700">
+            <div className="flex items-center gap-2">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+              <span className="text-sm">{loadingMessage}</span>
+            </div>
+          </div>
+        )}
+
+        {warningMessage && (
+          <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-md text-yellow-800">
+            <div className="flex items-center gap-2 mb-2">
+              <Clock className="h-4 w-4 text-yellow-600" />
+              <span className="text-sm">{warningMessage}</span>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onFunded()}
+              className="w-full mt-2 text-yellow-800 border-yellow-300 hover:bg-yellow-100"
+            >
+              Refresh Balance Manually
+            </Button>
+          </div>
+        )}
+
         {successMessage && (
           <div className="p-4 bg-green-50 border border-green-200 rounded-md text-green-700">
             <div className="flex items-center gap-2 mb-2">
@@ -174,10 +248,17 @@ export function FundingPanel({ walletAddress, onFunded }: FundingPanelProps) {
 
         <Button
           onClick={handleFundWallet}
-          disabled={isLoading}
+          disabled={isLoading || !!loadingMessage}
           className="w-full"
         >
-          {isLoading ? "Requesting Funds..." : `Fund with ${selectedToken.toUpperCase()}`}
+          {isLoading || loadingMessage ? (
+            <>
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+              {isLoading ? "Requesting Funds..." : "Processing..."}
+            </>
+          ) : (
+            `Fund with ${selectedToken.toUpperCase()}`
+          )}
         </Button>
 
         <div className="text-xs text-gray-500 space-y-1">

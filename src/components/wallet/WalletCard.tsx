@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Copy, RefreshCw, ExternalLink } from "lucide-react";
+import { Copy, RefreshCw, ExternalLink, Archive } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Wallet {
@@ -21,9 +21,10 @@ interface WalletCardProps {
   isSelected: boolean;
   onSelect: () => void;
   onRefreshBalance: (address: string) => void;
+  onArchive?: (address: string, name: string) => void;
 }
 
-export function WalletCard({ wallet, isSelected, onSelect, onRefreshBalance }: WalletCardProps) {
+export function WalletCard({ wallet, isSelected, onSelect, onRefreshBalance, onArchive }: WalletCardProps) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
 
@@ -133,6 +134,7 @@ export function WalletCard({ wallet, isSelected, onSelect, onRefreshBalance }: W
             }}
             disabled={isRefreshing}
             className="p-2"
+            title="Refresh Balance"
           >
             <RefreshCw className={cn("h-3 w-3", isRefreshing && "animate-spin")} />
           </Button>
@@ -145,9 +147,25 @@ export function WalletCard({ wallet, isSelected, onSelect, onRefreshBalance }: W
               window.open(`https://sepolia.basescan.org/address/${wallet.address}`, '_blank');
             }}
             className="p-2"
+            title="View on Block Explorer"
           >
             <ExternalLink className="h-3 w-3" />
           </Button>
+
+          {onArchive && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                onArchive(wallet.address, wallet.name);
+              }}
+              className="p-2 text-gray-500 hover:text-gray-700"
+              title="Archive Wallet"
+            >
+              <Archive className="h-3 w-3" />
+            </Button>
+          )}
         </div>
       </div>
     </div>
