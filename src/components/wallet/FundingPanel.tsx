@@ -16,6 +16,7 @@ interface FundingTransaction {
   token: string;
   explorerUrl?: string;
   timestamp: string;
+  amount?: string;
 }
 
 export function FundingPanel({ walletAddress, onFunded }: FundingPanelProps) {
@@ -23,11 +24,14 @@ export function FundingPanel({ walletAddress, onFunded }: FundingPanelProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [recentTransactions, setRecentTransactions] = useState<FundingTransaction[]>([]);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [lastTransaction, setLastTransaction] = useState<FundingTransaction | null>(null);
 
   const handleFundWallet = async () => {
     try {
       setIsLoading(true);
       setError(null);
+      setSuccessMessage(null);
 
       const response = await fetch("/api/wallet/fund", {
         method: "POST",
@@ -47,6 +51,9 @@ export function FundingPanel({ walletAddress, onFunded }: FundingPanelProps) {
 
       const result = await response.json();
       
+      // Determine amount based on token type
+      const amount = selectedToken === "usdc" ? "1.0 USDC" : "0.001 ETH";
+      
       // Add transaction to recent transactions
       const newTransaction: FundingTransaction = {
         transactionHash: result.transactionHash,
@@ -54,12 +61,21 @@ export function FundingPanel({ walletAddress, onFunded }: FundingPanelProps) {
         token: result.token,
         explorerUrl: result.explorerUrl,
         timestamp: new Date().toISOString(),
+        amount,
       };
 
       setRecentTransactions(prev => [newTransaction, ...prev.slice(0, 4)]);
+      setLastTransaction(newTransaction);
       
-      // Notify parent component
-      onFunded();
+      // Set success message
+      if (result.status === "success") {
+        setSuccessMessage(`Successfully funded wallet with ${amount}! Transaction confirmed on blockchain.`);
+        
+        // Auto-refresh balance after 3 seconds
+        setTimeout(() => {
+          onFunded();
+        }, 3000);
+      }
       
     } catch (err) {
       if (err instanceof Error && err.message.includes("rate limit")) {
@@ -135,6 +151,27 @@ export function FundingPanel({ walletAddress, onFunded }: FundingPanelProps) {
           </div>
         )}
 
+        {successMessage && (
+          <div className="p-4 bg-green-50 border border-green-200 rounded-md text-green-700">
+            <div className="flex items-center gap-2 mb-2">
+              <CheckCircle className="h-5 w-5 text-green-600" />
+              <span className="font-medium">Funding Successful!</span>
+            </div>
+            <p className="text-sm mb-3">{successMessage}</p>
+            {lastTransaction?.explorerUrl && (
+              <Button
+                variant="default"
+                size="sm"
+                onClick={() => window.open(lastTransaction.explorerUrl, '_blank')}
+                className="w-full bg-green-600 hover:bg-green-700 text-white"
+              >
+                <ExternalLink className="mr-2 h-4 w-4" />
+                View Transaction on Base Sepolia Explorer
+              </Button>
+            )}
+          </div>
+        )}
+
         <Button
           onClick={handleFundWallet}
           disabled={isLoading}
@@ -154,22 +191,27 @@ export function FundingPanel({ walletAddress, onFunded }: FundingPanelProps) {
             <h4 className="text-sm font-medium text-gray-700 mb-3">Recent Funding Transactions</h4>
             <div className="space-y-2">
               {recentTransactions.map((tx) => (
-                <div key={tx.transactionHash} className="flex items-center justify-between p-2 bg-gray-50 rounded text-sm">
-                  <div className="flex items-center gap-2">
+                <div key={tx.transactionHash} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg text-sm border">
+                  <div className="flex items-center gap-3">
                     {getStatusIcon(tx.status)}
-                    <span className="font-mono">
-                      {formatTransactionHash(tx.transactionHash)}
-                    </span>
-                    <span className="text-gray-500">({tx.token})</span>
+                    <div className="flex flex-col">
+                      <span className="font-mono text-xs">
+                        {formatTransactionHash(tx.transactionHash)}
+                      </span>
+                      <span className="text-gray-500 text-xs">
+                        {tx.amount || tx.token} • {new Date(tx.timestamp).toLocaleTimeString()}
+                      </span>
+                    </div>
                   </div>
                   {tx.explorerUrl && (
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => window.open(tx.explorerUrl, '_blank')}
-                      className="p-1 h-auto"
+                      className="p-2 h-auto hover:bg-gray-200"
+                      title="View on Block Explorer"
                     >
-                      <ExternalLink className="h-3 w-3" />
+                      <ExternalLink className="h-4 w-4" />
                     </Button>
                   )}
                 </div>
