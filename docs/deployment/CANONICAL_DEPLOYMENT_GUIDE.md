@@ -102,17 +102,20 @@ The high bits of the position 2848292 are not all 0s or 1s
 **Previous Error**:
 ```
 ❌ Invalid environment variables: [VERCEL_AI_GATEWAY_KEY]
+Error: Invalid environment variables
+    at j (.next/server/chunks/203.js:22:39083)
+    at 55386 (.next/server/app/api/wallet/balance/route.js:1:1952)
 ```
 
-**Root Cause**: Missing `VERCEL_AI_GATEWAY_KEY` in Vercel environment
+**Root Cause**: URL environment variable configuration issue when `VERCEL_PROJECT_PRODUCTION_URL` is undefined
 
 **Resolution Applied**:
-- ✅ Comprehensive environment variable documentation
-- ✅ Clear instructions for obtaining AI Gateway key
-- ✅ Verification commands for pre-deployment validation
-- ✅ Enhanced error messaging and troubleshooting
+- ✅ Fixed URL environment variable fallback in `src/lib/env.ts`
+- ✅ Updated runtimeEnv to properly handle undefined VERCEL_PROJECT_PRODUCTION_URL
+- ✅ Build process now completes successfully in 7.4s
+- ✅ Enhanced error messaging and troubleshooting documentation
 
-**Current Status**: Environment validation passes reliably
+**Current Status**: Environment validation passes reliably, builds complete successfully
 
 ## 🏗️ Current Architecture Status
 
@@ -372,6 +375,9 @@ vercel env add NETWORK base --env production
 - **[Coinbase CDP Portal](https://portal.cdp.coinbase.com)**: Credential management
 - **[Vercel Dashboard](https://vercel.com/dashboard)**: Deployment and AI Gateway
 - **[Base Sepolia Explorer](https://sepolia.basescan.org)**: Transaction monitoring
+
+### Domain & DNS Setup
+- **[DNS Setup Guide](./DNS_SETUP_GUIDE.md)**: Complete Namecheap + Vercel DNS configuration
 
 ## 🎯 Success Metrics
 

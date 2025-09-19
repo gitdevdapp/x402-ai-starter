@@ -23,7 +23,7 @@ export const env = createEnv({
     NETWORK: process.env.NETWORK,
     URL: process.env.VERCEL_PROJECT_PRODUCTION_URL
       ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
-      : undefined,
+      : process.env.URL || undefined,
     VERCEL_AI_GATEWAY_KEY: process.env.VERCEL_AI_GATEWAY_KEY,
     SELLER_ADDRESS: process.env.SELLER_ADDRESS,
   },
